@@ -29,14 +29,16 @@ def train(model, dataset, optimizer, criterion, epoch, args, data_start_index):
     loss_meter = AverageMeter('loss', ':6.4f')
     total_length = len(loader)
     progress = ProgressMeter(total_length, [loss_meter], prefix='Training: ')
+    # breakpoint()
     for batch_num, batch in enumerate(tqdm(loader, total=len(loader))):
         batch = [tensor.to(args.device) for tensor in batch]
         inputs, lengths, future_words, log_probs, labels, classification_targets, syllables_to_go, future_word_num_syllables, rhyme_group_index = batch
-        if args.task not in ['formality', 'iambic']:
+        if args.task not in ['formality', 'iambic', 'simplify']:
             if not args.debug and len(inputs) != args.batch_size: # it'll screw up the bias...?
                 continue
         scores = model(inputs, lengths, future_words, log_probs, syllables_to_go, future_word_num_syllables, rhyme_group_index, run_classifier=True)
-        if args.task == 'formality': # we're learning for all positions at once. scores are batch x seq
+        if args.task in ['formality', 'simplify']: # we're learning for all positions at once. scores are batch x seq
+            # breakpoint()
             expanded_labels = classification_targets.unsqueeze(1).expand(-1, scores.shape[1]) # batch x seq
             length_mask = pad_mask(lengths).permute(1, 0) # batch x seq
             loss = criterion(scores.flatten()[length_mask.flatten()==1], expanded_labels.flatten().float()[length_mask.flatten()==1])
@@ -58,19 +60,21 @@ def train(model, dataset, optimizer, criterion, epoch, args, data_start_index):
 def validate(model, dataset, criterion, epoch, args):
     model.eval()
     random.seed(0)
+    # breakpoint()
     loader = dataset.loader('val', num_workers=args.num_workers)
     loss_meter = AverageMeter('loss', ':6.4f')
     total_length = len(loader)
     progress = ProgressMeter(total_length, [loss_meter], prefix='Validation: ')
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(loader, total=len(loader))):
+            # breakpoint()
             batch = [tensor.to(args.device) for tensor in batch]
             inputs, lengths, future_words, log_probs, labels, classification_targets, syllables_to_go, future_word_num_syllables, rhyme_group_index = batch
-            if args.task not in ['formality', 'iambic']: # topic predictor
+            if args.task not in ['formality', 'iambic', 'simplify']: # topic predictor
                 if not args.debug and len(inputs) != args.batch_size:
                     continue
             scores = model(inputs, lengths, future_words, log_probs, syllables_to_go, future_word_num_syllables, rhyme_group_index, run_classifier=True)
-            if args.task == 'formality': # we're learning for all positions at once. scores are batch x seq
+            if args.task in ['formality', 'simplify']: # we're learning for all positions at once. scores are batch x seq
                 expanded_labels = classification_targets.unsqueeze(1).expand(-1, scores.shape[1]) # batch x seq
                 length_mask = pad_mask(lengths).permute(1, 0) # batch x seq
                 loss = criterion(scores.flatten()[length_mask.flatten()==1], expanded_labels.flatten().float()[length_mask.flatten()==1])
@@ -125,8 +129,9 @@ def main(args):
         return
     for epoch in range(args.epochs):
         print("TRAINING: Epoch {} at {}".format(epoch, time.ctime()))
+        # breakpoint()
         data_start_index = train(model, dataset, optimizer, criterion, epoch, args, data_start_index)
-        if epoch % args.validation_freq == 0:
+        if epoch != 0 and epoch % args.validation_freq == 0:
             print("VALIDATION: Epoch {} at {}".format(epoch, time.ctime()))
             metric = validate(model, dataset, criterion, epoch, args)
 
@@ -156,7 +161,7 @@ if __name__=='__main__':
     parser = ArgumentParser()
 
     # DATA
-    parser.add_argument('--task', type=str, required=True, choices=['iambic', 'rhyme', 'newline', 'topic', 'formality'])
+    parser.add_argument('--task', type=str, required=True, choices=['iambic', 'rhyme', 'newline', 'topic', 'formality', 'simplify'])
     parser.add_argument('--data_dir', type=str, required=True)
     parser.add_argument('--glove_file', type=str, help='glove embedding init, for topic task')
 
@@ -179,7 +184,11 @@ if __name__=='__main__':
     parser.add_argument('--debug', action='store_true', default=False)
 
     # PRINTING
-    parser.add_argument('--train_print_freq', type=int, default=100, help='how often to print metrics (every X batches)')
+    parser.add_argument('--train_print_freq', type=int, default=500, help='how often to print metrics (every X batches)')
+
+    # added for ATS
+    parser.add_argument('--tgt_level', type=int, default=4, help='simplification level corresponding to newsela metadata')
+
 
     args = parser.parse_args()
 

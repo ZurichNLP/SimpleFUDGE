@@ -22,6 +22,7 @@ RhymeInfo = namedtuple('RhymeInfo',
                 ['word2rhyme_group', 'rhyme_group_counts', 'rhyme_groups', 'index2rhyme_group', 'rhyme_group2index', 'total_rhyme_groups'])
 
 def collate(batch):
+    # breakpoint()
     pad_id = batch[0][4]
     inputs = [b[0] for b in batch]
     lengths = torch.LongTensor([b[1] for b in batch])
@@ -75,6 +76,9 @@ def load_rhyme_info(index2word, vocab):
                      rhyme_group2index=rhyme_group2index, 
                      total_rhyme_groups=total_rhyme_groups)
 
+def split_line(line):
+    line = line.split()
+    return [' '.join(line[:i]) for i in range(len(line)) if i > 0]
 
 class Dataset:
     def __init__(self, args):
@@ -87,10 +91,20 @@ class Dataset:
         self.iambic = args.task == 'iambic'
         self.rhyme = args.task == 'rhyme'
         self.newline = args.task == 'newline'
+        self.simplify = args.task == 'simplify'
 
-        self.tokenizer = AutoTokenizer.from_pretrained(FORMALITY_MODEL_STRING if self.formality else TOPIC_MODEL_STRING)
+        tokenizer_name = None 
+        if self.formality:
+            tokenizer_name = FORMALITY_MODEL_STRING
+        if self.simplify:
+            tokenizer_name = SIMPLIFY_MODEL_STRING
+        else:
+            tokenizer_name = TOPIC_MODEL_STRING
+
+        # breakpoint()
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         self.tokenizer.add_special_tokens({'pad_token': PAD_TOKEN})
-        self.gpt_pad_id = self.tokenizer.encode(PAD_TOKEN)[0] # actually just the vocab size
+        self.gpt_pad_id = self.tokenizer.encode(PAD_TOKEN, add_special_tokens=False)[0] # actually just the vocab size
         sentences = []
         self.vocab = defaultdict(lambda: 0)
         if self.formality:
@@ -112,6 +126,67 @@ class Dataset:
                         test.append((line.strip(), label))
             self.splits = {}
             self.splits['train'], self.splits['val'], self.splits['test'] = train, val, test
+
+        ####################
+
+        if self.simplify:
+            
+            simp_levels = [0, 1, 2, 3, 4, 5] 
+            # simplification levels (aggregated grades in Newsela)
+            # 0 = complex (no simplification), 5 = most simplifified
+
+            self.vocab['placeholder'] = 1 # anything so we don't crash
+            
+            # collect positive samples
+            pos_train, pos_val, pos_test = [], [], []
+            for split in ['train', 'test', 'valid']:
+                with open(os.path.join(args.data_dir, f'{split}_{str(args.tgt_level)}.txt'), 'r') as rf:
+                    for i, line in enumerate(rf):
+                        line_parts = split_line(line.strip())
+                        for lp in line_parts:
+                            if split == 'test':
+                                pos_test.append((lp, 1))
+                            elif split == 'valid':
+                                pos_val.append((lp, 1))
+                            else:
+                                pos_train.append((lp, 1))
+
+            
+            # collect all negative samples, i.e. sentences
+            # from more complex language levels in Newsela
+            neg_train, neg_val, neg_test = [], [], []
+            # neg_simp_levels = list(filter(lambda x: x < args.tgt_level, simp_levels))
+            neg_simp_levels = [0]
+            for split in ['train', 'test', 'valid']:
+                for simp_level in neg_simp_levels:
+                    with open(os.path.join(args.data_dir, f'{split}_{str(simp_level)}.txt'), 'r') as rf:
+                        for i, line in enumerate(rf):
+                            line_parts = split_line(line.strip())
+                            for lp in line_parts:
+                                if split == 'test':
+                                    neg_test.append((lp, 0))
+                                elif split == 'valid':
+                                    neg_val.append((lp, 0))
+                                else:
+                                    neg_train.append((lp, 0))
+
+            # shuffle collected negative samples
+            random.shuffle(neg_train)
+            random.shuffle(neg_val)
+            random.shuffle(neg_test)
+            # breakpoint()
+            self.splits = {}
+            self.splits['train'] = pos_train + neg_train[:len(pos_train)]
+            self.splits['val'] = pos_val + neg_val[:len(pos_val)]
+            self.splits['test'] = pos_test + neg_test[:len(pos_test)]
+
+            random.shuffle(self.splits['train'])
+            random.shuffle(self.splits['val'])
+            random.shuffle(self.splits['test'])
+            # breakpoint()
+
+        ####################
+
         else: # topic / poetry
             for root, _, filenames in os.walk(args.data_dir):
                 for fname in filenames:
@@ -131,6 +206,7 @@ class Dataset:
                 self.splits['test'] = sentences[TOPIC_VAL_SIZE:2*TOPIC_VAL_SIZE]
                 self.splits['train'] = sentences[2*TOPIC_VAL_SIZE:]
 
+        # breakpoint()
         if args.dataset_info is not None:
             print('loading dataset info from file')
             with open(args.dataset_info, 'rb') as rf:
@@ -190,7 +266,7 @@ class Dataset:
         print('split sizes:')
         for key in ['train', 'val', 'test']:
             print(key, len(self.splits[key]))
-        if not self.formality:
+        if not self.formality and not self.simplify:
             print('total words', self.total_words)
             print('vocab size', len(self.index2word))
 
@@ -233,6 +309,7 @@ class SplitLoader(torch.utils.data.IterableDataset):
             if self.pos == 0:
                 self.pos = worker_id
         valid = False
+        # breakpoint()
         while not valid:
             if self.pos >= len(self):
                 raise StopIteration
@@ -283,6 +360,35 @@ class SplitLoader(torch.utils.data.IterableDataset):
                     pad_id = self.parent.gpt_pad_id
                     example = (inp, length, future_word, word_log_prob, pad_id, classification_label, syllables_to_go, future_word_num_syllables, rhyme_group_index)
                     valid = True
+            
+            #######################
+
+            elif self.parent.simplify:
+                future_word_num_syllables, rhyme_group_index, syllables_to_go = -1, -1, -1
+                raw_sentence, classification_label = self.data[self.pos]
+                original_sentence = raw_sentence.split()
+                # breakpoint()
+                sentence = self.parent.tokenizer.encode(raw_sentence, return_tensors='pt', add_special_tokens=False)[0]
+                length = len(sentence)
+                min_sentence_length = MIN_SIMPLIFY_LENGTH
+                if len(sentence) > min_sentence_length: # set to 3. well, everything in data is > 3 for the bag of words task
+                    pos_to_split = length # no need to split since we already have the label
+                    inp = sentence[:pos_to_split]
+                    length = len(inp)
+                    num_words_in_input = len(self.parent.tokenizer.decode(inp).split())
+                    # only look up to 10 words ahead if we're doing count syllables, since we'll filter out anything more than 10 syllables ahead anyway
+                    future_word_position_max = len(original_sentence) - 1
+                    future_word_position = 0
+                    future_word = 'placeholder'
+                    unstripped_future_word = future_word
+                    future_word = future_word.strip().strip(string.punctuation) # NOTE: we didn't strip punctuation for the topic bag of words paper experiments for our method. it doesn't make much difference, though.
+                    word_log_prob, future_word = 0, 0
+                    pad_id = self.parent.gpt_pad_id
+                    example = (inp, length, future_word, word_log_prob, pad_id, classification_label, syllables_to_go, future_word_num_syllables, rhyme_group_index)
+                    # breakpoint()
+                    valid = True
+
+
             elif self.parent.iambic:
                 failed = False
                 future_word_num_syllables, rhyme_group_index, syllables_to_go = -1, -1, -1

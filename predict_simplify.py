@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelWithLMHead, pipeline, set_seed, GPT2Tokenizer, GPT2Model, MarianTokenizer, MarianMTModel
+from transformers import BartForConditionalGeneration, BartTokenizer
 
 from data import Dataset
 from model import Model
@@ -20,61 +21,120 @@ from constants import *
 def main(args):
     with open(args.dataset_info, 'rb') as rf:
         dataset_info = pickle.load(rf)
-    tokenizer = MarianTokenizer.from_pretrained(args.model_string)
+    
+    # modification: BART model as G
+    # NOTE special tokens and ids: 
+    # {'bos_token': '<s>', 'eos_token': '</s>', 'unk_token': '<unk>', 'sep_token': '</s>', 'pad_token': '<pad>', 'cls_token': '<s>', 'mask_token': '<mask>'}
+    #   {0: '<s>', 1: '<pad>', 2: '</s>', 3: '<unk>'}
+    tokenizer = BartTokenizer.from_pretrained(SIMPLIFY_MODEL_STRING)
+    model = BartForConditionalGeneration.from_pretrained(SIMPLIFY_MODEL_STRING, return_dict=True).to(args.device)
+    # breakpoint()
+    # TODO sort out special tokens 
     tokenizer.add_special_tokens({'pad_token': PAD_TOKEN})
-    pad_id = tokenizer.encode(PAD_TOKEN)[0]
-    model = MarianMTModel.from_pretrained(args.model_string, return_dict=True).to(args.device)
+    pad_id = tokenizer.encode(PAD_TOKEN, add_special_tokens=False)[0]
+        
     model.eval()
 
     checkpoint = torch.load(args.ckpt, map_location=args.device)
     model_args = checkpoint['args']
     conditioning_model = Model(model_args, pad_id, len(dataset_info.index2word)) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
-    conditioning_model.load_state_dict(checkpoint['state_dict'])
+    conditioning_model.load_state_dict(checkpoint['state_dict']) # NOTE when loading state_dict for Model, size mismatch for marian_embed.weight: copying a param with shape torch.Size([65002, 300]) from checkpoint, the shape in current model is torch.Size([50266, 300])
+    # TODO first need to train discriminator with bart args
     conditioning_model = conditioning_model.to(args.device)
     conditioning_model.eval()
     print("=> loaded checkpoint '{}' (epoch {})"
             .format(args.ckpt, checkpoint['epoch']))
     print('num params', num_params(conditioning_model))
 
-    while True:
-        results = predict_formality(model, 
-                        tokenizer, 
-                        conditioning_model, 
-                        [args.input_text], 
-                        dataset_info, 
-                        precondition_topk=args.precondition_topk,
-                        do_sample=args.do_sample,
-                        length_cutoff=args.length_cutoff,
-                        condition_lambda=args.condition_lambda,
-                        device=args.device)
-        print(results)
-        import pdb; pdb.set_trace()
+    # while True:
+    results = predict_simplicity(model, 
+                    tokenizer, 
+                    conditioning_model, 
+                    [args.input_text], 
+                    dataset_info, 
+                    args,
+                    # precondition_topk=args.precondition_topk,
+                    # do_sample=args.do_sample,
+                    # length_cutoff=args.length_cutoff,
+                    # condition_lambda=args.condition_lambda,
+                    # device=args.device
+                    )
+    print(results)
 
+def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')):
+    """ 
+    adapted from
+    https://github.com/dapascual/K2T/blob/64e25a08adce7d2772b5e60a387aff345a2755ca/main.py#L61
+    
+        Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
+        Args:
+            logits: logits distribution shape (vocabulary size)
+            top_k >0: keep only top k tokens with highest probability (top-k filtering).
+            top_p >0.0: keep the top tokens with cumulative probability >= top_p (nucleus filtering).
+                Nucleus filtering is described in Holtzman et al. (http://arxiv.org/abs/1904.09751)
+    """
+    # breakpoint()
+    # assert logits.dim() == 1  # batch size 1 for now - could be updated for more but the code would be less clear
+    top_k = min(top_k, logits.size(-1))  # Safety check
+    if top_k > 0:
+        # Remove all tokens with a probability less than the last token of the top-k
+        indices_to_remove = logits < torch.topk(logits, top_k)[0][..., -1, None]
+        logits[indices_to_remove] = filter_value
 
-def predict_formality(model, tokenizer, conditioning_model, input_text, dataset_info, precondition_topk=200, do_sample=False, length_cutoff=512, condition_lambda=1.0, device='cuda'):
+    if 0.0 < top_p < 1.0:
+        sorted_logits, sorted_indices = torch.sort(logits, descending=True)
+        cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+
+        # Remove tokens with cumulative probability above the threshold
+        sorted_indices_to_remove = cumulative_probs > top_p
+        # Shift the indices to the right to keep also the first token above the threshold
+        sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+        sorted_indices_to_remove[..., 0] = 0
+
+        # indices_to_remove = torch.zeros_like(logits, dtype=torch.uint8).scatter_(dim=-1, index=sorted_indices, src=sorted_indices_to_remove )
+
+        indices_to_remove = sorted_indices[sorted_indices_to_remove]
+        # logits.view(-1)[indices_to_remove]
+        # logits[indices_to_remove] = filter_value
+        logits.view(-1)[indices_to_remove] = filter_value
+        
+    return logits
+
+def predict_simplicity(model, tokenizer, conditioning_model, input_text, dataset_info, args):
+    # breakpoint()
+    # precondition_topk=200, do_sample=False, length_cutoff=512, condition_lambda=1.0, device='cuda'
     with torch.no_grad():
         batch_size = len(input_text)
 
         # assumes initially all same length.
-        encoded_input = [tokenizer.encode(it, return_tensors='pt').to(device) for it in input_text] # batch x seq
+        encoded_input = [tokenizer.encode(it, return_tensors='pt').to(args.device) for it in input_text] # batch x seq
         encoded_input = torch.cat(encoded_input, dim=0)
 
-        input_ids = torch.LongTensor([[65000]]).to(device)
+        
+        # breakpoint()
+        # https://huggingface.co/docs/transformers/model_doc/bart#transformers.BartConfig
+        input_ids = torch.LongTensor([[model.config.decoder_start_token_id]]).to(args.device)
         cur_len = 1
-        max_length = length_cutoff
+        # generation settings
+        max_length = args.length_cutoff
         min_length = 0
-        temperature = 1.0
-        top_k = 50
-        top_p = 1.0
+        temperature = args.temperature
+        do_sample = args.do_sample
+        top_k = args.top_k
+        top_p = args.top_p
         repetition_penalty = 1.0
         no_repeat_ngram_size = 0
-        bad_words_ids = [[65000]]
-        pad_token_id = 65000
-        eos_token_id = 0
+        bad_words_ids = None #[[tokenizer.pad_token_id]] TODO: causes index error in BART's model.postprocess_next_token_scores()
+        pad_token_id = tokenizer.pad_token_id
+        eos_token_id = tokenizer.eos_token_id
         effective_batch_size = batch_size
         attention_mask = encoded_input.new_ones(encoded_input.shape)
         use_cache = True
         model_specific_kwargs = {'encoder_outputs': model.get_encoder()(encoded_input, attention_mask=attention_mask)}
+
+        # fudge specific controls
+        condition_lambda = args.condition_lambda
+        precondition_topk = args.precondition_topk
 
         output = _generate_no_beam_search(model,
                                         conditioning_model,
@@ -129,6 +189,7 @@ def _generate_no_beam_search(
         """Generate sequences for each example without beam search (num_beams == 1).
         All returned sequence are generated independantly.
         """
+        # breakpoint()
         # length of generated sentences / unfinished sentences
         unfinished_sents = input_ids.new(batch_size).fill_(1)
         sent_lengths = input_ids.new(batch_size).fill_(max_length)
@@ -141,7 +202,7 @@ def _generate_no_beam_search(
 
             outputs = model(**model_inputs, return_dict=True)
             next_token_logits = outputs.logits[:, -1, :]
-            breakpoint()
+            # breakpoint()
             scores = model.postprocess_next_token_scores(
                 scores=next_token_logits,
                 input_ids=input_ids,
@@ -162,6 +223,7 @@ def _generate_no_beam_search(
             elif "mems" in outputs:
                 past = outputs.mems
 
+            # breakpoint()
             top_logits, top_indices = scores.topk(precondition_topk, dim=1) # batch x topk
             tplus1_candidates = torch.cat([input_ids.unsqueeze(1).expand(-1, precondition_topk, -1), top_indices.unsqueeze(2)], dim=2)[:, :, 1:] # batch x topk x seq+1, with pad dropped
             expanded_lengths = torch.LongTensor([[cur_len for _ in range(precondition_topk)] for _ in range(batch_size)]).to(scores.device)
@@ -174,27 +236,26 @@ def _generate_no_beam_search(
                                                     None,
                                                     None)
                 condition_logits = condition_logits.view(batch_size, precondition_topk, -1)[:, :, -1] # batch x topk of last formality pred
+                # breakpoint()
+                # TODO: check logic applied to logits
                 condition_logits = condition_logits - torch.log(1 + torch.exp(condition_logits)) # get correct log probs
                 # condition_logits = - torch.log(1 + torch.exp(condition_logits)) # for informal
             full_logits = top_logits + condition_lambda * condition_logits
+            
+            if temperature != 1.0:
+                full_logits = full_logits / temperature
+            
             if do_sample:
-                raise NotImplementedError
+                # raise NotImplementedError
+                next_token_logscores = top_k_top_p_filtering(full_logits, top_k=top_k, top_p=top_p)
+                # Sample
+                # breakpoint()
+                probs = F.softmax(next_token_logscores, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1).squeeze(1)
+
             else:
                 # Greedy decoding
                 next_token = top_indices[torch.arange(batch_size).to(top_indices.device), torch.argmax(full_logits, dim=-1)]
-
-            # if do_sample:
-            #     # Temperature (higher temperature => more likely to sample low probability tokens)
-            #     if temperature != 1.0:
-            #         scores = scores / temperature
-            #     # Top-p/top-k filtering
-            #     next_token_logscores = top_k_top_p_filtering(scores, top_k=top_k, top_p=top_p)
-            #     # Sample
-            #     probs = F.softmax(next_token_logscores, dim=-1)
-            #     next_token = torch.multinomial(probs, num_samples=1).squeeze(1)
-            # else:
-            #     # Greedy decoding
-            #     next_token = torch.argmax(next_token_logits, dim=-1)
 
             # update generations and finished sentences
             if eos_token_id is not None:
@@ -239,6 +300,9 @@ if __name__=='__main__':
 
     parser.add_argument('--precondition_topk', type=int, default=200, help='consider top k outputs from gpt at each step before conditioning and re-pruning')
     parser.add_argument('--do_sample', action='store_true', default=False, help='sample instead of greedy')
+    parser.add_argument('--temperature', type=float, default=1.0, help='temperature used to modify logits for generation.')
+    parser.add_argument('--top_k', type=int, default=0, help='')
+    parser.add_argument('--top_p', type=float, default=1.0, help='')
     parser.add_argument('--condition_lambda', type=float, default=1.0, help='lambda weight on conditioning model')
     parser.add_argument('--length_cutoff', type=int, default=512, help='max length')
 
