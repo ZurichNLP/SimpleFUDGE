@@ -84,9 +84,11 @@ def validate(model, dataset, criterion, epoch, args):
             else: # topic, rhyme
                 loss = criterion(scores.flatten(), labels.flatten().float())
             loss_meter.update(loss.detach(), len(labels))
-            if batch_num % args.train_print_freq == 0:
-                progress.display(batch_num)
+            # if batch_num % args.train_print_freq == 0:
+            #     progress.display(batch_num)
+    # breakpoint()
     progress.display(total_length)
+    # print(loss_meter.avg)
     return loss_meter.avg
 
 
