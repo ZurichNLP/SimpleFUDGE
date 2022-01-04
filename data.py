@@ -129,7 +129,7 @@ class Dataset:
 
         ####################
 
-        if self.simplify:
+        elif self.simplify:
             
             simp_levels = [0, 1, 2, 3, 4, 5] 
             # simplification levels (aggregated grades in Newsela)

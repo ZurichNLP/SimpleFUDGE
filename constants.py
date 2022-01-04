@@ -1,10 +1,9 @@
 PAD_TOKEN = '[PAD]'
 EOT_TOKEN = '<|endoftext|>'
-SEP = 50256 # just use the weird eot token
+# SEP = 50256 # just use the weird eot token
 
 TOPIC_MODEL_STRING = 'gpt2-medium'
 FORMALITY_MODEL_STRING = 'Helsinki-NLP/opus-mt-es-en'
-# SIMPLIFY_MODEL_STRING = 'Helsinki-NLP/opus-mt-es-en'
 SIMPLIFY_MODEL_STRING = 'facebook/bart-base' # swapping out marianMT for bart
 
 DIR_END_SPLIT_POSITIONS = 32

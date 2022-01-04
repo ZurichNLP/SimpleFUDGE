@@ -141,7 +141,7 @@ def _generate_no_beam_search(
 
             outputs = model(**model_inputs, return_dict=True)
             next_token_logits = outputs.logits[:, -1, :]
-            breakpoint()
+
             scores = model.postprocess_next_token_scores(
                 scores=next_token_logits,
                 input_ids=input_ids,
