@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn 
 import torch.nn.functional as F 
 from torch.nn.utils.rnn import pad_sequence, pad_packed_sequence, pack_padded_sequence
-from transformers import AutoTokenizer, AutoModelWithLMHead, pipeline, set_seed, GPT2Tokenizer, GPT2Model, GPT2LMHeadModel, GPT2Config, GPT2ForSequenceClassification, GPT2LMHeadModel, MarianTokenizer
+from transformers import AutoTokenizer, AutoModelWithLMHead, pipeline, set_seed, GPT2Tokenizer, GPT2Model, GPT2LMHeadModel, GPT2Config, GPT2ForSequenceClassification, GPT2LMHeadModel, MarianTokenizer, BartTokenizer
 
 from constants import *
 from util import pad_mask
@@ -18,6 +18,7 @@ class Model(nn.Module):
         self.iambic = args.task == 'iambic'
         self.rhyme = args.task == 'rhyme'
         self.newline = args.task == 'newline'
+        self.simplify = args.task == 'simplify'
         if self.topic:
             self.gpt_embed = nn.Embedding(gpt_pad_id + 1, HIDDEN_DIM, padding_idx=gpt_pad_id) # these are subwords, not words
             if glove_embeddings is None:
@@ -39,9 +40,17 @@ class Model(nn.Module):
             self.out_linear3 = nn.Linear(HIDDEN_DIM, 1)
             self.nonlinear = nn.ReLU()
         elif self.formality:
+            # breakpoint()
             self.marian_embed = nn.Embedding(gpt_pad_id + 1, HIDDEN_DIM, padding_idx=0) # 0 in marian is ''
             self.rnn = nn.LSTM(HIDDEN_DIM, HIDDEN_DIM, num_layers=3, bidirectional=False, dropout=0.5) # want it to be causal so we can learn all positions
             self.out_linear = nn.Linear(HIDDEN_DIM, 1)
+        ###################
+        elif self.simplify:
+            # breakpoint()
+            self.bart_embed = nn.Embedding(gpt_pad_id + 1, HIDDEN_DIM, padding_idx=0) # 0 in marian is ''
+            self.rnn = nn.LSTM(HIDDEN_DIM, HIDDEN_DIM, num_layers=3, bidirectional=False, dropout=0.5) # want it to be causal so we can learn all positions
+            self.out_linear = nn.Linear(HIDDEN_DIM, 1)
+        ###################
         elif self.iambic:
             self.gpt_embed = nn.Embedding(gpt_pad_id + 1, HIDDEN_DIM, padding_idx=gpt_pad_id)
             self.rnn = nn.LSTM(HIDDEN_DIM, HIDDEN_DIM, num_layers=3, bidirectional=False, dropout=0) # want it to be causal so we can learn all positions
@@ -108,6 +117,18 @@ class Model(nn.Module):
             rnn_output, _ = pad_packed_sequence(rnn_output)
             rnn_output = rnn_output.permute(1, 0, 2) # batch x seq x 300
             return self.out_linear(rnn_output).squeeze(2)
+        
+        ###################
+        elif self.simplify:
+            # breakpoint()
+            inputs = self.bart_embed(inputs) # batch x seq x hidden_dim
+            inputs = pack_padded_sequence(inputs.permute(1, 0, 2), lengths.cpu(), enforce_sorted=False)
+            rnn_output, _ = self.rnn(inputs)
+            rnn_output, _ = pad_packed_sequence(rnn_output)
+            rnn_output = rnn_output.permute(1, 0, 2) # batch x seq x 300
+            return self.out_linear(rnn_output).squeeze(2)
+        ###################
+
         elif self.iambic:
             inputs = self.gpt_embed(inputs)
             inputs = pack_padded_sequence(inputs.permute(1, 0, 2), lengths.cpu(), enforce_sorted=False)
