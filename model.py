@@ -12,7 +12,7 @@ from util import pad_mask
 class Model(nn.Module):
     def __init__(self, args, gpt_pad_id, vocab_size, rhyme_group_size=None, glove_embeddings=None, verbose=True):
         super(Model, self).__init__()
-
+        print(f'PAD ID is set to {gpt_pad_id}')
         self.topic = args.task == 'topic'
         self.formality = args.task == 'formality'
         self.iambic = args.task == 'iambic'
@@ -40,13 +40,11 @@ class Model(nn.Module):
             self.out_linear3 = nn.Linear(HIDDEN_DIM, 1)
             self.nonlinear = nn.ReLU()
         elif self.formality:
-            # breakpoint()
             self.marian_embed = nn.Embedding(gpt_pad_id + 1, HIDDEN_DIM, padding_idx=0) # 0 in marian is ''
             self.rnn = nn.LSTM(HIDDEN_DIM, HIDDEN_DIM, num_layers=3, bidirectional=False, dropout=0.5) # want it to be causal so we can learn all positions
             self.out_linear = nn.Linear(HIDDEN_DIM, 1)
         ###################
         elif self.simplify:
-            # breakpoint()
             self.bart_embed = nn.Embedding(gpt_pad_id + 1, HIDDEN_DIM, padding_idx=0) # 0 in marian is ''
             self.rnn = nn.LSTM(HIDDEN_DIM, HIDDEN_DIM, num_layers=3, bidirectional=False, dropout=0.5) # want it to be causal so we can learn all positions
             self.out_linear = nn.Linear(HIDDEN_DIM, 1)
@@ -120,7 +118,6 @@ class Model(nn.Module):
         
         ###################
         elif self.simplify:
-            # breakpoint()
             inputs = self.bart_embed(inputs) # batch x seq x hidden_dim
             inputs = pack_padded_sequence(inputs.permute(1, 0, 2), lengths.cpu(), enforce_sorted=False)
             rnn_output, _ = self.rnn(inputs)

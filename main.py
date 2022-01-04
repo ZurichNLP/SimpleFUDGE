@@ -29,7 +29,6 @@ def train(model, dataset, optimizer, criterion, epoch, args, data_start_index):
     loss_meter = AverageMeter('loss', ':6.4f')
     total_length = len(loader)
     progress = ProgressMeter(total_length, [loss_meter], prefix='Training: ')
-    # breakpoint()
     for batch_num, batch in enumerate(tqdm(loader, total=len(loader))):
         batch = [tensor.to(args.device) for tensor in batch]
         inputs, lengths, future_words, log_probs, labels, classification_targets, syllables_to_go, future_word_num_syllables, rhyme_group_index = batch
@@ -38,7 +37,6 @@ def train(model, dataset, optimizer, criterion, epoch, args, data_start_index):
                 continue
         scores = model(inputs, lengths, future_words, log_probs, syllables_to_go, future_word_num_syllables, rhyme_group_index, run_classifier=True)
         if args.task in ['formality', 'simplify']: # we're learning for all positions at once. scores are batch x seq
-            # breakpoint()
             expanded_labels = classification_targets.unsqueeze(1).expand(-1, scores.shape[1]) # batch x seq
             length_mask = pad_mask(lengths).permute(1, 0) # batch x seq
             loss = criterion(scores.flatten()[length_mask.flatten()==1], expanded_labels.flatten().float()[length_mask.flatten()==1])
@@ -60,14 +58,12 @@ def train(model, dataset, optimizer, criterion, epoch, args, data_start_index):
 def validate(model, dataset, criterion, epoch, args):
     model.eval()
     random.seed(0)
-    # breakpoint()
     loader = dataset.loader('val', num_workers=args.num_workers)
     loss_meter = AverageMeter('loss', ':6.4f')
     total_length = len(loader)
     progress = ProgressMeter(total_length, [loss_meter], prefix='Validation: ')
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(loader, total=len(loader))):
-            # breakpoint()
             batch = [tensor.to(args.device) for tensor in batch]
             inputs, lengths, future_words, log_probs, labels, classification_targets, syllables_to_go, future_word_num_syllables, rhyme_group_index = batch
             if args.task not in ['formality', 'iambic', 'simplify']: # topic predictor
@@ -86,7 +82,6 @@ def validate(model, dataset, criterion, epoch, args):
             loss_meter.update(loss.detach(), len(labels))
             # if batch_num % args.train_print_freq == 0:
             #     progress.display(batch_num)
-    # breakpoint()
     progress.display(total_length)
     # print(loss_meter.avg)
     return loss_meter.avg
@@ -105,6 +100,7 @@ def main(args):
         start_epoch = checkpoint['epoch'] + 1
         best_val_metric = checkpoint['best_metric']
         model_args = checkpoint['args']
+        # model = Model(model_args, 65001, len(dataset.index2word), rhyme_group_size=len(dataset.index2rhyme_group) if args.task == 'rhyme' else None) # 
         model = Model(model_args, dataset.gpt_pad_id, len(dataset.index2word), rhyme_group_size=len(dataset.index2rhyme_group) if args.task == 'rhyme' else None) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
         model.load_state_dict(checkpoint['state_dict'])
         model = model.to(args.device)
@@ -131,7 +127,6 @@ def main(args):
         return
     for epoch in range(args.epochs):
         print("TRAINING: Epoch {} at {}".format(epoch, time.ctime()))
-        # breakpoint()
         data_start_index = train(model, dataset, optimizer, criterion, epoch, args, data_start_index)
         if epoch != 0 and epoch % args.validation_freq == 0:
             print("VALIDATION: Epoch {} at {}".format(epoch, time.ctime()))

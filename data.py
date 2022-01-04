@@ -22,7 +22,6 @@ RhymeInfo = namedtuple('RhymeInfo',
                 ['word2rhyme_group', 'rhyme_group_counts', 'rhyme_groups', 'index2rhyme_group', 'rhyme_group2index', 'total_rhyme_groups'])
 
 def collate(batch):
-    # breakpoint()
     pad_id = batch[0][4]
     inputs = [b[0] for b in batch]
     lengths = torch.LongTensor([b[1] for b in batch])
@@ -96,12 +95,11 @@ class Dataset:
         tokenizer_name = None 
         if self.formality:
             tokenizer_name = FORMALITY_MODEL_STRING
-        if self.simplify:
+        elif self.simplify:
             tokenizer_name = SIMPLIFY_MODEL_STRING
         else:
             tokenizer_name = TOPIC_MODEL_STRING
 
-        # breakpoint()
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         self.tokenizer.add_special_tokens({'pad_token': PAD_TOKEN})
         self.gpt_pad_id = self.tokenizer.encode(PAD_TOKEN, add_special_tokens=False)[0] # actually just the vocab size
@@ -174,7 +172,6 @@ class Dataset:
             random.shuffle(neg_train)
             random.shuffle(neg_val)
             random.shuffle(neg_test)
-            # breakpoint()
             self.splits = {}
             self.splits['train'] = pos_train + neg_train[:len(pos_train)]
             self.splits['val'] = pos_val + neg_val[:len(pos_val)]
@@ -183,7 +180,6 @@ class Dataset:
             random.shuffle(self.splits['train'])
             random.shuffle(self.splits['val'])
             random.shuffle(self.splits['test'])
-            # breakpoint()
 
         ####################
 
@@ -206,7 +202,6 @@ class Dataset:
                 self.splits['test'] = sentences[TOPIC_VAL_SIZE:2*TOPIC_VAL_SIZE]
                 self.splits['train'] = sentences[2*TOPIC_VAL_SIZE:]
 
-        # breakpoint()
         if args.dataset_info is not None:
             print('loading dataset info from file')
             with open(args.dataset_info, 'rb') as rf:
@@ -309,7 +304,6 @@ class SplitLoader(torch.utils.data.IterableDataset):
             if self.pos == 0:
                 self.pos = worker_id
         valid = False
-        # breakpoint()
         while not valid:
             if self.pos >= len(self):
                 raise StopIteration
@@ -367,7 +361,6 @@ class SplitLoader(torch.utils.data.IterableDataset):
                 future_word_num_syllables, rhyme_group_index, syllables_to_go = -1, -1, -1
                 raw_sentence, classification_label = self.data[self.pos]
                 original_sentence = raw_sentence.split()
-                # breakpoint()
                 sentence = self.parent.tokenizer.encode(raw_sentence, return_tensors='pt', add_special_tokens=False)[0]
                 length = len(sentence)
                 min_sentence_length = MIN_SIMPLIFY_LENGTH
@@ -385,7 +378,6 @@ class SplitLoader(torch.utils.data.IterableDataset):
                     word_log_prob, future_word = 0, 0
                     pad_id = self.parent.gpt_pad_id
                     example = (inp, length, future_word, word_log_prob, pad_id, classification_label, syllables_to_go, future_word_num_syllables, rhyme_group_index)
-                    # breakpoint()
                     valid = True
 
 
