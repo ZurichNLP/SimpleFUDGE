@@ -60,8 +60,9 @@ def validate(model, dataset, criterion, epoch, args):
     random.seed(0)
     loader = dataset.loader('val', num_workers=args.num_workers)
     loss_meter = AverageMeter('loss', ':6.4f')
+    acc_meter = AverageMeter('acc', ':6.4f')
     total_length = len(loader)
-    progress = ProgressMeter(total_length, [loss_meter], prefix='Validation: ')
+    progress = ProgressMeter(total_length, [loss_meter, acc_meter], prefix='Validation: ')
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(loader, total=len(loader))):
             batch = [tensor.to(args.device) for tensor in batch]
@@ -74,15 +75,21 @@ def validate(model, dataset, criterion, epoch, args):
                 expanded_labels = classification_targets.unsqueeze(1).expand(-1, scores.shape[1]) # batch x seq
                 length_mask = pad_mask(lengths).permute(1, 0) # batch x seq
                 loss = criterion(scores.flatten()[length_mask.flatten()==1], expanded_labels.flatten().float()[length_mask.flatten()==1])
+                # report prediction accuracy
+                # https://discuss.pytorch.org/t/when-do-i-turn-prediction-numbers-into-1-and-0-for-binary-classification/130075
+                acc = ((scores.flatten()[length_mask.flatten()==1] > 0.0) == expanded_labels.flatten().float()[length_mask.flatten()==1]).float().mean()
+                # breakpoint()
             elif args.task in ['iambic', 'newline']:
                 use_indices = classification_targets.flatten() != -1
                 loss = criterion(scores.flatten()[use_indices], classification_targets.flatten().float()[use_indices])
             else: # topic, rhyme
                 loss = criterion(scores.flatten(), labels.flatten().float())
             loss_meter.update(loss.detach(), len(labels))
+            acc_meter.update(acc.detach(), len(labels))
             # if batch_num % args.train_print_freq == 0:
             #     progress.display(batch_num)
     progress.display(total_length)
+    # breakpoint()
     # print(loss_meter.avg)
     return loss_meter.avg
 
@@ -128,7 +135,7 @@ def main(args):
     for epoch in range(args.epochs):
         print("TRAINING: Epoch {} at {}".format(epoch, time.ctime()))
         data_start_index = train(model, dataset, optimizer, criterion, epoch, args, data_start_index)
-        if epoch != 0 and epoch % args.validation_freq == 0:
+        if epoch > 0 and epoch % args.validation_freq == 0:
             print("VALIDATION: Epoch {} at {}".format(epoch, time.ctime()))
             metric = validate(model, dataset, criterion, epoch, args)
 
@@ -181,7 +188,7 @@ if __name__=='__main__':
     parser.add_argument('--debug', action='store_true', default=False)
 
     # PRINTING
-    parser.add_argument('--train_print_freq', type=int, default=500, help='how often to print metrics (every X batches)')
+    parser.add_argument('--train_print_freq', type=int, default=1000000, help='how often to print metrics (every X batches)')
 
     # added for ATS
     parser.add_argument('--tgt_level', type=int, default=4, help='simplification level corresponding to newsela metadata')

@@ -124,7 +124,7 @@ class Dataset:
                         test.append((line.strip(), label))
             self.splits = {}
             self.splits['train'], self.splits['val'], self.splits['test'] = train, val, test
-
+            # breakpoint()
         ####################
 
         elif self.simplify:
@@ -140,7 +140,8 @@ class Dataset:
             for split in ['train', 'test', 'valid']:
                 with open(os.path.join(args.data_dir, f'{split}_{str(args.tgt_level)}.txt'), 'r') as rf:
                     for i, line in enumerate(rf):
-                        line_parts = split_line(line.strip())
+                        #line_parts = split_line(line.strip())
+                        line_parts = [line.strip()]
                         for lp in line_parts:
                             if split == 'test':
                                 pos_test.append((lp, 1))
@@ -159,7 +160,8 @@ class Dataset:
                 for simp_level in neg_simp_levels:
                     with open(os.path.join(args.data_dir, f'{split}_{str(simp_level)}.txt'), 'r') as rf:
                         for i, line in enumerate(rf):
-                            line_parts = split_line(line.strip())
+                            #line_parts = split_line(line.strip())
+                            line_parts = [line.strip()]
                             for lp in line_parts:
                                 if split == 'test':
                                     neg_test.append((lp, 0))

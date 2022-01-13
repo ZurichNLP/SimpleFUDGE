@@ -4,7 +4,8 @@ EOT_TOKEN = '<|endoftext|>'
 
 TOPIC_MODEL_STRING = 'gpt2-medium'
 FORMALITY_MODEL_STRING = 'Helsinki-NLP/opus-mt-es-en'
-SIMPLIFY_MODEL_STRING = 'facebook/bart-base' # swapping out marianMT for bart
+# SIMPLIFY_MODEL_STRING = 'facebook/bart-base' # swapping out marianMT for bart
+SIMPLIFY_MODEL_STRING = '/srv/scratch6/kew/paraphrase/bart-paraphrase' # swapping out marianMT for bart
 
 DIR_END_SPLIT_POSITIONS = 32
 

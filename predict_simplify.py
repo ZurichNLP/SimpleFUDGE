@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModelWithLMHead, pipeline, set_seed, GPT2Tokenizer, GPT2Model, MarianTokenizer, MarianMTModel
+from transformers import AutoTokenizer, AutoModelWithLMHead, AutoModelForSeq2SeqLM, pipeline, set_seed, GPT2Tokenizer, GPT2Model, MarianTokenizer, MarianMTModel
 from transformers import BartForConditionalGeneration, BartTokenizer
 
 from data import Dataset
@@ -26,6 +26,7 @@ def main(args):
     # NOTE special tokens and ids: 
     # {'bos_token': '<s>', 'eos_token': '</s>', 'unk_token': '<unk>', 'sep_token': '</s>', 'pad_token': '<pad>', 'cls_token': '<s>', 'mask_token': '<mask>'}
     #   {0: '<s>', 1: '<pad>', 2: '</s>', 3: '<unk>'}
+    # breakpoint()
     tokenizer = BartTokenizer.from_pretrained(SIMPLIFY_MODEL_STRING)
     model = BartForConditionalGeneration.from_pretrained(SIMPLIFY_MODEL_STRING, return_dict=True).to(args.device)
     # breakpoint()
