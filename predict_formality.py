@@ -17,6 +17,9 @@ from model import Model
 from util import save_checkpoint, ProgressMeter, AverageMeter, num_params
 from constants import *
 
+# factored out common generation utility methods
+from generation_utils import top_k_top_p_filtering, _postprocess_next_token_scores
+
 def main(args):
     with open(args.dataset_info, 'rb') as rf:
         dataset_info = pickle.load(rf)
@@ -142,7 +145,7 @@ def _generate_no_beam_search(
             outputs = model(**model_inputs, return_dict=True)
             next_token_logits = outputs.logits[:, -1, :]
 
-            scores = model.postprocess_next_token_scores(
+            scores = _postprocess_next_token_scores(
                 scores=next_token_logits,
                 input_ids=input_ids,
                 no_repeat_ngram_size=no_repeat_ngram_size,

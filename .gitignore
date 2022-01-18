@@ -139,3 +139,11 @@ cython_debug/
 
 transformers/
 environment.yml
+
+# lm training
+lightning_logs/
+wandb/
+copy_of_bart_learns_to_rap_medium.py
+inference.py
+sanity_check_inference.py
+nohup*
