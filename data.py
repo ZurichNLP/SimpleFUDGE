@@ -101,8 +101,16 @@ class Dataset:
             tokenizer_name = TOPIC_MODEL_STRING
 
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-        self.tokenizer.add_special_tokens({'pad_token': PAD_TOKEN})
-        self.gpt_pad_id = self.tokenizer.encode(PAD_TOKEN, add_special_tokens=False)[0] # actually just the vocab size
+        
+        # TODO remove default adding pad token
+        # breakpoint()
+        if not self.tokenizer.pad_token:
+        
+            self.tokenizer.add_special_tokens({'pad_token': PAD_TOKEN})
+            self.gpt_pad_id = self.tokenizer.encode(PAD_TOKEN, add_special_tokens=False)[0] # actually just the vocab size
+        else:
+            self.gpt_pad_id = self.tokenizer.pad_token_id
+
         sentences = []
         self.vocab = defaultdict(lambda: 0)
         if self.formality:
