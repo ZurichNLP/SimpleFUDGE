@@ -108,7 +108,12 @@ def main(args):
         best_val_metric = checkpoint['best_metric']
         model_args = checkpoint['args']
         # model = Model(model_args, 65001, len(dataset.index2word), rhyme_group_size=len(dataset.index2rhyme_group) if args.task == 'rhyme' else None) # 
-        model = Model(model_args, dataset.gpt_pad_id, len(dataset.index2word), rhyme_group_size=len(dataset.index2rhyme_group) if args.task == 'rhyme' else None) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
+        model = Model(
+            model_args, 
+            dataset.gpt_pad_id, 
+            len(dataset.index2word) if args.task != 'simplify' else dataset.tokenizer.vocab_size,
+            rhyme_group_size=len(dataset.index2rhyme_group) if args.task == 'rhyme' else None
+            ) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
         model.load_state_dict(checkpoint['state_dict'])
         model = model.to(args.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=model_args.lr)
@@ -120,7 +125,19 @@ def main(args):
         # model.eval()
         # import pdb; pdb.set_trace()
     else:
-        model = Model(args, dataset.gpt_pad_id, len(dataset.index2word), rhyme_group_size=len(dataset.index2rhyme_group) if args.task == 'rhyme' else None, glove_embeddings=dataset.glove_embeddings)
+        # For BART models, dataset.gpt_pad_id = bart's
+        # pad_token_id (assigned in data.py). Therefore we
+        # pass the true vocab size of BART's tokenizer to
+        # the model to construct the embedding layer.
+
+        # model = Model(args, dataset.gpt_pad_id, len(dataset.index2word), rhyme_group_size=len(dataset.index2rhyme_group) if args.task == 'rhyme' else None, glove_embeddings=dataset.glove_embeddings)
+        model = Model(
+            args, 
+            dataset.gpt_pad_id, 
+            len(dataset.index2word) if args.task != 'simplify' else dataset.tokenizer.vocab_size, 
+            rhyme_group_size=len(dataset.index2rhyme_group) if args.task == 'rhyme' else None, 
+            glove_embeddings=dataset.glove_embeddings
+            )
         model = model.to(args.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         best_val_metric = 1e8 # lower is better for BCE

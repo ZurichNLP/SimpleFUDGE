@@ -32,16 +32,13 @@ def main(args):
     # breakpoint()
     tokenizer = BartTokenizer.from_pretrained(SIMPLIFY_MODEL_STRING)
     model = BartForConditionalGeneration.from_pretrained(SIMPLIFY_MODEL_STRING, return_dict=True).to(args.device)
-    # breakpoint()
-    # TODO sort out special tokens 
-    tokenizer.add_special_tokens({'pad_token': PAD_TOKEN})
-    pad_id = tokenizer.encode(PAD_TOKEN, add_special_tokens=False)[0]
-        
     model.eval()
 
     checkpoint = torch.load(args.ckpt, map_location=args.device)
     model_args = checkpoint['args']
-    conditioning_model = Model(model_args, pad_id, len(dataset_info.index2word)) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
+
+    pad_id = tokenizer.pad_token_id
+    conditioning_model = Model(model_args, pad_id, tokenizer.vocab_size) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
     conditioning_model.load_state_dict(checkpoint['state_dict']) # NOTE when loading state_dict for Model, size mismatch for marian_embed.weight: copying a param with shape torch.Size([65002, 300]) from checkpoint, the shape in current model is torch.Size([50266, 300])
     # TODO first need to train discriminator with bart args
     conditioning_model = conditioning_model.to(args.device)
