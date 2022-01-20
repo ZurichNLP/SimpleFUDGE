@@ -272,7 +272,24 @@ def parse_args():
         "--freeze_encoder",
         action="store_true",
         help=(
-            "Whether or not to freeze encoder parameters and update only the decoder during fine-tuning."
+            "Whether or not to freeze encoder parameters during fine-tuning."
+        ),
+    )
+
+    parser.add_argument(
+        "--freeze_embeds",
+        action="store_true",
+        help=(
+            "Whether or not to freeze (positional and token) embeeding parameters during fine-tuning."
+        ),
+    )
+
+    parser.add_argument(
+        "--log_params",
+        type=bool,
+        default=True,
+        help=(
+            "Whether or not to log parameters with gradients."
         ),
     )
 
@@ -294,6 +311,30 @@ def parse_args():
 
     return args
 
+def freeze_params(model):
+    """Set requires_grad=False for each of model.parameters()"""
+    for par in model.parameters():
+        par.requires_grad = False
+
+def freeze_embeds(model):
+    """Freeze token embeddings and positional embeddings for bart, just token embeddings for t5."""
+    model_type = model.config.model_type
+
+    if model_type in ["t5", "mt5"]:
+        freeze_params(model.shared)
+        for d in [model.encoder, model.decoder]:
+            freeze_params(d.embed_tokens)
+    elif model_type == "fsmt":
+        for d in [model.model.encoder, model.model.decoder]:
+            freeze_params(d.embed_positions)
+            freeze_params(d.embed_tokens)
+    else:
+        freeze_params(model.model.shared)
+        for d in [model.model.encoder, model.model.decoder]:
+            freeze_params(d.embed_positions)
+            freeze_params(d.embed_tokens)
+
+    # freeze_embeds(model)
 
 def main():
     args = parse_args()
@@ -403,6 +444,20 @@ def main():
     model.resize_token_embeddings(len(tokenizer))
     if model.config.decoder_start_token_id is None:
         raise ValueError("Make sure that `config.decoder_start_token_id` is correctly defined")
+
+    # feeze encoder params https://huggingface.co/transformers/v3.4.0/training.html#freezing-the-encoder
+    if args.freeze_encoder:
+        freeze_params(model.get_encoder())
+        logger.info("Encoder parameters will not be updated during fine-tuning")   
+    if args.freeze_embeds:
+        freeze_embeds(model)
+        logger.info("Embeddings will not be updated during fine-tuning")   
+
+    if args.log_params:
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                logger.info(f"{name}: {str(param.data.shape)}")
+
 
     prefix = args.source_prefix if args.source_prefix is not None else ""
 
@@ -530,16 +585,11 @@ def main():
     )
 
     # Metric
-    metric = load_metric("rouge")
+    metric = load_metric("sacrebleu")
 
     # Train!
     total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
 
-    # feeze encoder params https://huggingface.co/transformers/v3.4.0/training.html#freezing-the-encoder
-    if args.freeze_encoder:
-        for param in model.base_model.parameters():
-            param.requires_grad = False 
-        logger.info("Encoder parameters will not be updated in fine-tuning")   
 
     logger.info("***** Running training *****")
     logger.info(f"  Num examples = {len(train_dataset)}")
@@ -606,10 +656,20 @@ def main():
 
                 decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
 
-                metric.add_batch(predictions=decoded_preds, references=decoded_labels)
-        result = metric.compute(use_stemmer=True)
-        # Extract a few results from ROUGE
-        result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
+                # breakpoint()
+                if metric.name == 'sacrebleu':
+                    metric.add_batch(predictions=decoded_preds, references=[[s] for s in decoded_labels])
+                elif metric.name == 'rouge':
+                    metric.add_batch(predictions=decoded_preds, references=decoded_labels)
+        
+        if metric.name == 'sacrebleu':
+            result = metric.compute()
+            # breakpoint()
+            result = {"bleu": result["score"]}
+        elif metric.name == 'rouge':
+            result = metric.compute(use_stemmer=True)
+            # Extract a few results from ROUGE
+            result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
 
         result = {k: round(v, 4) for k, v in result.items()}
 

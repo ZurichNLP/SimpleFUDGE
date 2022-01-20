@@ -1,10 +1,52 @@
-# FUDGE: Controlled Text Generation With Future Discriminators
+# SIMPLE FUDGE
 
-This repo contains code corresponding to the paper FUDGE: Controlled Text Generation With Future Discriminators (https://arxiv.org/abs/2104.05218) by Kevin Yang and Dan Klein, published at NAACL 2021. 
+This repo adapts the central idea behind FUDGE: Controlled
+Text Generation With Future Discriminators
+(https://arxiv.org/abs/2104.05218) by Kevin Yang and Dan
+Klein (2021) for text simplification.
 
-You can also find a video presentation at http://somup.com/crhlVPFKN7 and the corresponding slides in `slides.pptx`. 
+# Changes
 
-## Setup/Installation
+FUDGE has been reimplemented here as a standalone 
+LogitProcessor which can be used with most of
+HuggingFace's generation utilities. This facilitates
+experimentation with more advanced decoding techniques, e.g.
+beam search, top-k/nucleus sampling.
+
+
+## Relevant links
+
+- [Original code](https://github.com/yangkevin2/naacl-2021-fudge-controlled-generation)
+- [Custom logits processors](https://towardsdatascience.com/the-power-of-constrained-language-models-cf63b65a035d)
+
+## Sanity check
+
+Output of new implementation matches the original when using
+greedy decoding.
+
+```
+python predict_simplify_as_logits_processor.py --ckpt /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar --dataset_info /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/dataset_info --precondition_topk 200 --condition_lambda 80 --vectorized --num_beams 1 --num_return_sequences 1 --input_text "This is a test sentence"
+['They are saying.This is a test.']
+
+python predict_simplify.py --ckpt /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar --dataset_info /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/dataset_info --precondition_topk 200 --condition_lambda 80 --input_text "This is a test sentence"
+['They are saying.This is a test.</s>']
+```
+
+Usage Examples
+
+```
+python predict_simplify_as_logits_processor.py --ckpt /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar --dataset_info /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/dataset_info --precondition_topk 200 --condition_lambda 10 --vectorized --num_beams 4 --num_return_sequences 4 --soft
+
+
+```
+
+
+
+<!-- ## TODOs
+- [ ] fix model string inherited from dataset for BART model
+- [ ]  -->
+
+<!-- ## Setup/Installation
 
 We tested on Python 3.8.5 but earlier versions of Python 3 are almost certainly fine. To get the required packages (other versions likely to work too):
 
@@ -23,10 +65,10 @@ and extract the zip to the top-level `lm-prediction/` folder. (There should be t
 `ckpt/` contains predictor checkpoints for each task if you are just interested in running inference. (Note that for the paper results, we used predictors trained with an older version of the code, but the new checkpoints get similar results, so you are OK to use the new predictors provided here if e.g. you just want to use FUDGE as a baseline. You can just run the evaluation commands provided below; it should take maybe 5-60 minutes depending on the task and your compute, assuming you have a GPU.)
 
 `train_data/` contains our GPT2-generated training data for the poetry and topic tasks' predictors. See https://github.com/raosudha89/GYAFC-corpus for instructions on gaining access to the GYAFC data used for the machine translation formality task; replace our dummy folders with the corresponding folders/files if you want to train our formality predictor. 
+ -->
+<!-- ## Poetry Couplet Completion -->
 
-## Poetry Couplet Completion
-
-### Evaluation
+<!-- ### Evaluation
 
 To generate outputs, run:
 
@@ -134,4 +176,7 @@ Alternatively, the general FUDGE framework is pretty simple, so you could always
 
 (3) For computational efficiency, we first filter the base model's next token probabilities down to the top 200 (Sec. 3.1 in the paper), before adding the classifier logits. This way you only need to evaluate your classifier on 200 continuations. Then afterward, you filter down again to whatever top-k/greedy/nucleus sampling you're using for evaluation (we use top-k with k=10 for poetry and topic, greedy for formality). 
 
-(4) You can use a pretrained LM backbone instead of a simple LSTM backbone for the predictor as well. This should work better when your dataset is smaller. 
+(4) You can use a pretrained LM backbone instead of a simple LSTM backbone for the predictor as well. This should work better when your dataset is smaller.
+
+--- -->
+
