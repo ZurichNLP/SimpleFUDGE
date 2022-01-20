@@ -12,7 +12,7 @@ from util import pad_mask
 class Model(nn.Module):
     def __init__(self, args, gpt_pad_id, vocab_size, rhyme_group_size=None, glove_embeddings=None, verbose=True):
         super(Model, self).__init__()
-        print(f'PAD ID is set to {gpt_pad_id}')
+        # print(f'PAD ID is set to {gpt_pad_id}')
         self.topic = args.task == 'topic'
         self.formality = args.task == 'formality'
         self.iambic = args.task == 'iambic'
