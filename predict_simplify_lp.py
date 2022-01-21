@@ -32,6 +32,50 @@ from transformers import (
 
 from fudge import FUDGELogits
 
+def generation_arg_parser(description=None):
+    parser = ArgumentParser(description)
+
+    # DATA
+    parser.add_argument('--ckpt', type=str, required=True)
+    parser.add_argument('--dataset_info', type=str, required=True, help='saved dataset info')
+    parser.add_argument('--model_string', type=str, default='Helsinki-NLP/opus-mt-es-en')
+
+    parser.add_argument('--seed', type=int, default=1, help='random seed')
+    parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
+    parser.add_argument('--debug', action='store_true', default=False, help='helper argument for testing and debugging runs')
+    parser.add_argument('--verbose', action='store_true', default=False, help='print verbose output')
+    # generation args
+    parser.add_argument('--input_text', type=str, default=None, required=False, help='text to run pred on')
+    
+    #####################
+    # beam search params: 
+    # inherited from https://github.com/huggingface/transformers/blob/master/src/transformers/generation_beam_search.py#L118
+    parser.add_argument('--num_beams', type=int, default=4, help='Number of beams for beam search.')
+    parser.add_argument('--num_return_sequences', type=int, default=1, help='The number of beam hypotheses that shall be returned when finalising beams.')
+    parser.add_argument('--do_early_stopping', type=bool, default=False, help='Whether to stop the beam search when at least `num_beams` sentences are finished per batch or not.')
+    parser.add_argument('--length_penalty', type=float, default=1.0, help='Exponential penalty to the length. 1.0 means no penalty. Set to values < 1.0 in order to encourage the model to generate shorter sequences, to a value > 1.0 in order to encourage the model to produce longer sequences.')
+    parser.add_argument('--num_beam_groups', type=int, default=1, help='Number of groups to divide `num_beams` into in order to ensure diversity among different groups of beams. See [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details. NOTE: not working with FUDGE')
+    parser.add_argument('--temperature', type=float, default=1.0, help='temperature used to modify logits for generation.')
+    parser.add_argument('--min_length', type=int, default=1, help='minimum length of target sequence, used to instantiate a MinLengthLogitProcessor')
+    
+    ############################
+    # stochastic decoing params: 
+    parser.add_argument('--do_sample', action='store_true', default=False, help='sample instead of greedy')
+    parser.add_argument('--top_k', type=int, default=0, help='')
+    parser.add_argument('--top_p', type=float, default=1.0, help='')
+    parser.add_argument('--max_length', type=int, default=128, help='max generated sequence length')
+    parser.add_argument('--repetition_penalty', type=float, default=1.0, help='')
+    parser.add_argument('--no_repeat_ngram_size', type=int, default=1, help='')
+    parser.add_argument('--bad_words', nargs='*', default=None, help='')
+
+    # FUDGE-specific args
+    parser.add_argument('--precondition_topk', type=int, default=200, help='consider top k outputs from gpt at each step before conditioning and re-pruning')
+    parser.add_argument('--condition_lambda', type=float, default=1.0, help='lambda weight on conditioning model')
+    parser.add_argument('--vectorized', action='store_true', default=True, help='whether or not to use the vectorized implementation of FUDGE logits_processor')
+    parser.add_argument('--soft', action='store_true', default=False, help="type of fudge: if provided, all logits not in FUDGE's topk preselection are set to -inf and will not be generated. Default: False, i.e. these logits are left untouched and could still be generated.")
+    
+    return parser
+
 def predict_simplicity(model, tokenizer, conditioning_model, input_text, dataset_info, args):
 
     with torch.no_grad():
@@ -68,7 +112,6 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, dataset
                 args.soft,
                 args.vectorized
                 )
-
             logits_processor.append(fudge_proc)
 
         stopping_criterion = StoppingCriteriaList([MaxLengthCriteria(max_length=args.max_length)])
@@ -178,49 +221,8 @@ def main(args):
     print('***')
 
 if __name__=='__main__':
-    parser = ArgumentParser()
-
-    # DATA
-    parser.add_argument('--ckpt', type=str, required=True)
-    parser.add_argument('--dataset_info', type=str, required=True, help='saved dataset info')
-    parser.add_argument('--model_string', type=str, default='Helsinki-NLP/opus-mt-es-en')
-
-    parser.add_argument('--seed', type=int, default=1, help='random seed')
-    parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
-    parser.add_argument('--debug', action='store_true', default=False)
-
-    # generation args
-    parser.add_argument('--input_text', type=str, default=None, required=False, help='text to run pred on')
     
-    #####################
-    # beam search params: 
-    # inherited from https://github.com/huggingface/transformers/blob/master/src/transformers/generation_beam_search.py#L118
-    parser.add_argument('--num_beams', type=int, default=4, help='Number of beams for beam search.')
-    parser.add_argument('--num_return_sequences', type=int, default=1, help='The number of beam hypotheses that shall be returned when finalising beams.')
-    parser.add_argument('--do_early_stopping', type=bool, default=False, help='Whether to stop the beam search when at least `num_beams` sentences are finished per batch or not.')
-    parser.add_argument('--length_penalty', type=float, default=1.0, help='Exponential penalty to the length. 1.0 means no penalty. Set to values < 1.0 in order to encourage the model to generate shorter sequences, to a value > 1.0 in order to encourage the model to produce longer sequences.')
-    parser.add_argument('--num_beam_groups', type=int, default=1, help='Number of groups to divide `num_beams` into in order to ensure diversity among different groups of beams. See [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details. NOTE: not working with FUDGE')
-    parser.add_argument('--temperature', type=float, default=1.0, help='temperature used to modify logits for generation.')
-    parser.add_argument('--min_length', type=int, default=1, help='minimum length of target sequence, used to instantiate a MinLengthLogitProcessor')
-    
-    ############################
-    # stochastic decoing params: 
-    parser.add_argument('--do_sample', action='store_true', default=False, help='sample instead of greedy')
-    parser.add_argument('--top_k', type=int, default=0, help='')
-    parser.add_argument('--top_p', type=float, default=1.0, help='')
-    parser.add_argument('--max_length', type=int, default=128, help='max generated sequence length')
-    parser.add_argument('--repetition_penalty', type=float, default=1.0, help='')
-    parser.add_argument('--no_repeat_ngram_size', type=int, default=1, help='')
-    parser.add_argument('--bad_words', nargs='*', default=None, help='')
-
-    # FUDGE-specific args
-    parser.add_argument('--precondition_topk', type=int, default=200, help='consider top k outputs from gpt at each step before conditioning and re-pruning')
-    parser.add_argument('--condition_lambda', type=float, default=1.0, help='lambda weight on conditioning model')
-    parser.add_argument('--vectorized', action='store_true', default=False, help='whether or not to use the vectorized implementation of FUDGE logits_processor (in dev)')
-    parser.add_argument('--soft', action='store_true', default=False, help="type of fudge: if provided, all logits not in FUDGE's topk preselection are set to -inf and will not be generated. Default: False, i.e. these logits are left untouched and could still be generated.")
-    
-    args = parser.parse_args()
-
+    args = generation_arg_parser().parse_args()
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
