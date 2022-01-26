@@ -6,7 +6,7 @@ import argparse
 
 import torch
 
-from train import LitModel
+from model import LitModel
 from transformers import BartForConditionalGeneration
 
 """
