@@ -1,6 +1,7 @@
 import random
 import math
 import os
+from pathlib import Path
 import pickle
 from collections import defaultdict, namedtuple
 import string
@@ -21,14 +22,62 @@ DatasetInfo = namedtuple('DatasetInfo',
 RhymeInfo = namedtuple('RhymeInfo', 
                 ['word2rhyme_group', 'rhyme_group_counts', 'rhyme_groups', 'index2rhyme_group', 'rhyme_group2index', 'total_rhyme_groups'])
 
+def glove_encode(glove_encoder, word):
+    return glove_encoder(word)
+
+
+
+def checker(string):
+    # string = string.replace(' ', '')
+    string = string.replace('Ġ', '') # special char for BPE
+    return string.strip().lower()
+
+
+## Pytorch
+def map_tokens_to_glove(tokenizer, embedding_file, glove_string):
+    """
+    Adapted from K2T https://github.com/dapascual/K2T/blob/main/utility_gpt.py
+    """
+    Path(embedding_file.parent).mkdir(parents=True, exist_ok=True)
+    
+    print('Loading pre-trained embeddings from Gensim...')
+    import gensim.downloader as api
+    glove_encoder = api.load(glove_string)
+
+    holder = np.zeros((tokenizer.vocab_size, 300), dtype=np.float32) # ensure float 32 for compatibility during training
+    
+    # look up glove representations for each token from the generator model's tokenizer
+    null_words = set()
+    for i in tqdm(range(tokenizer.vocab_size), total=tokenizer.vocab_size):
+        # breakpoint()
+        try:
+            word = tokenizer.decode([i])
+            glove_emb = glove_encoder[checker(word)]
+            holder[i, :] = glove_emb
+        except:
+            word = tokenizer.decode([i])
+            null_words.add(word)
+            holder[i, :] = np.zeros((300))
+
+    # print(null_words)
+    print(f'Number of tokens initialised with zero verctor {len(null_words)}')
+    np.save(file=str(embedding_file.with_suffix('')), arr=holder) # save for quicker loading later
+
+    print('Table was generated...')
+    return holder
+
 def collate(batch):
+    # breakpoint()
     pad_id = batch[0][4]
     inputs = [b[0] for b in batch]
     lengths = torch.LongTensor([b[1] for b in batch])
     max_length = lengths.max()
     for i in range(len(inputs)):
         if len(inputs[i]) < max_length:
-            inputs[i] = torch.cat([inputs[i], torch.zeros(max_length - len(inputs[i])).long()], dim=0) # actually 0 is fine as pad since it's masked out
+            if pad_id == 1:
+                inputs[i] = torch.cat([inputs[i], torch.ones(max_length - len(inputs[i])).long()], dim=0)
+            else:
+                inputs[i] = torch.cat([inputs[i], torch.zeros(max_length - len(inputs[i])).long()], dim=0) # actually 0 is fine as pad since it's masked out
     inputs = torch.stack(inputs, dim=0)
     future_words = torch.LongTensor([b[2] for b in batch]).unsqueeze(0).expand(len(batch), -1).clone() # batch x N=batch
     labels = torch.zeros_like(future_words).long()
@@ -92,20 +141,20 @@ class Dataset:
         self.newline = args.task == 'newline'
         self.simplify = args.task == 'simplify'
 
-        tokenizer_name = None 
-        if self.formality:
-            tokenizer_name = FORMALITY_MODEL_STRING
-        elif self.simplify:
-            tokenizer_name = SIMPLIFY_MODEL_STRING
-        else:
-            tokenizer_name = TOPIC_MODEL_STRING
-
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(args.model_path_or_name)
+        except:
+            tokenizer_name = None 
+            if self.formality:
+                tokenizer_name = FORMALITY_MODEL_STRING
+            elif self.simplify:
+                raise RuntimeError
+            else:
+                tokenizer_name = TOPIC_MODEL_STRING
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         
         # TODO remove default adding pad token
-        # breakpoint()
-        if not self.tokenizer.pad_token:
-        
+        if not self.tokenizer.pad_token:            
             self.tokenizer.add_special_tokens({'pad_token': PAD_TOKEN})
             self.gpt_pad_id = self.tokenizer.encode(PAD_TOKEN, add_special_tokens=False)[0] # actually just the vocab size
         else:
@@ -221,41 +270,59 @@ class Dataset:
             self.dataset_info = dataset_info
         else:
             print('generating dataset info from scratch')
-            words_values = list(self.vocab.items())
-            words_values = sorted(words_values, key=lambda x: x[1], reverse=True)
-            if args.glove_file is None:
+            if args.task != 'simplify':
+                words_values = list(self.vocab.items())
+                words_values = sorted(words_values, key=lambda x: x[1], reverse=True)
+            
+            if args.glove is None:
                 print('no glove embeddings given')
                 for word, _ in words_values[VOCAB_SIZE:]: # only use somewhat common tokens
                     del self.vocab[word]
                 glove_embeddings = None
             else:
-                print('loading glove embeddings')
-                glove_embeddings = {}
-                with open(args.glove_file, 'r') as rf:
-                    for i, line in enumerate(rf):
-                        if i % GLOVE_PRINT_PROGRESS_FREQ == 0:
-                            print(i)
-                        line = line.strip().split()
-                        if len(line) != GLOVE_DIM + 1:
-                            continue # skip multi-word embeddings which are rare anyway
-                        glove_embeddings[line[0]] = [float(x) for x in line[1:]]
-                for word, _ in words_values:
-                    if word not in glove_embeddings:
-                        del self.vocab[word]
-            self.total_words = sum(self.vocab.values())
-            self.index2word = [PAD_TOKEN] + sorted(list(self.vocab.keys()))
-            self.word2index = {s: i for i, s in enumerate(self.index2word)}
-            self.vocab = dict(self.vocab) # so we can pickle later
-            if glove_embeddings is None:
-                self.glove_embeddings = None
-            else:
-                self.glove_embeddings = torch.stack([torch.zeros(GLOVE_DIM)] + [torch.Tensor(glove_embeddings[word]) for word in self.index2word[1:]], dim=0)
+                if args.task != 'simplify': # orginal impl.
+                    print('loading glove embeddings')
+                    glove_embeddings = {}
+                    with open(args.glove, 'r') as rf:
+                        for i, line in tqdm(enumerate(rf)):
+                            line = line.strip().split()
+                            if len(line) != GLOVE_DIM + 1:
+                                continue # skip multi-word embeddings which are rare anyway
+                            glove_embeddings[line[0]] = [float(x) for x in line[1:]]
+                    for word, _ in words_values:
+                        if word not in glove_embeddings:
+                            del self.vocab[word]
+
+                    self.total_words = sum(self.vocab.values())
+                    self.index2word = [PAD_TOKEN] + sorted(list(self.vocab.keys()))
+                    self.word2index = {s: i for i, s in enumerate(self.index2word)}
+                    self.vocab = dict(self.vocab) # so we can pickle later
+                    if glove_embeddings is None:
+                        self.glove_embeddings = None
+                    else:
+                        self.glove_embeddings = torch.stack([torch.zeros(GLOVE_DIM)] + [torch.Tensor(glove_embeddings[word]) for word in self.index2word[1:]], dim=0)
+
+                else: # special handling for simplification
+                    # expected glove embedding mapping name should follow form `[tokenizer name]_glove.npy`
+                    embedding_file = Path(args.save_dir) / f"{self.tokenizer.name_or_path.split('/')[-1]}_{args.glove}.npy"
+                    if not embedding_file.is_file():
+                        # create a new mapping if not existing for current tokenizer and glove embs
+                        self.glove_embeddings = map_tokens_to_glove(self.tokenizer, embedding_file, args.glove)
+                    else:
+                        print(f'using existing embedding mapping from {embedding_file}')
+                        self.glove_embeddings = np.load(str(embedding_file))
+                    self.total_words = len(self.tokenizer.vocab)
+                    self.word2index = self.tokenizer.vocab
+                    self.index2word = {v:k for k, v in self.tokenizer.vocab.items()} # TODO need to remove prefix token?
+                    self.vocab = self.tokenizer.vocab
+                    self.embedding_file = str(embedding_file)
+                
 
             self.dataset_info = DatasetInfo(index2word=self.index2word,
                                             word2index=self.word2index,
                                             total_words=self.total_words,
                                             vocab=self.vocab,
-                                            glove_embeddings=self.glove_embeddings)
+                                            glove_embeddings=self.embedding_file)
         
         if self.rhyme:
             if args.rhyme_info is not None:
@@ -368,6 +435,7 @@ class SplitLoader(torch.utils.data.IterableDataset):
             #######################
 
             elif self.parent.simplify:
+                # breakpoint()
                 future_word_num_syllables, rhyme_group_index, syllables_to_go = -1, -1, -1
                 raw_sentence, classification_label = self.data[self.pos]
                 original_sentence = raw_sentence.split()
