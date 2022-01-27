@@ -36,10 +36,9 @@ def generation_arg_parser(description=None):
     parser = ArgumentParser(description)
 
     # DATA
-    parser.add_argument('--ckpt', type=str, required=True)
+    parser.add_argument('--condition_model', type=str, required=True)
     parser.add_argument('--dataset_info', type=str, required=True, help='saved dataset info')
-    parser.add_argument('--model_string', type=str, default='Helsinki-NLP/opus-mt-es-en')
-
+    parser.add_argument('--generation_model', type=str, required=True, help='path to finetuned model or huggingface identifier')
     parser.add_argument('--seed', type=int, default=1, help='random seed')
     parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
     parser.add_argument('--debug', action='store_true', default=False, help='helper argument for testing and debugging runs')
@@ -70,7 +69,7 @@ def generation_arg_parser(description=None):
 
     # FUDGE-specific args
     parser.add_argument('--precondition_topk', type=int, default=200, help='consider top k outputs from gpt at each step before conditioning and re-pruning')
-    parser.add_argument('--condition_lambda', type=float, default=1.0, help='lambda weight on conditioning model')
+    parser.add_argument('--condition_lambda', type=float, default=1.0, help='lambda weight on conditioning model. Note: if set to 0, FUDGE is not applied!')
     parser.add_argument('--vectorized', action='store_true', default=True, help='whether or not to use the vectorized implementation of FUDGE logits_processor')
     parser.add_argument('--soft', action='store_true', default=False, help="type of fudge: if provided, all logits not in FUDGE's topk preselection are set to -inf and will not be generated. Default: False, i.e. these logits are left untouched and could still be generated.")
     
@@ -181,22 +180,22 @@ def main(args):
     with open(args.dataset_info, 'rb') as rf:
         dataset_info = pickle.load(rf)
     
-    tokenizer = BartTokenizer.from_pretrained(SIMPLIFY_MODEL_STRING)
-    model = BartForConditionalGeneration.from_pretrained(SIMPLIFY_MODEL_STRING, return_dict=True).to(args.device)
+    tokenizer = BartTokenizer.from_pretrained(args.generation_model)
+    model = BartForConditionalGeneration.from_pretrained(args.generation_model, return_dict=True).to(args.device)
     model.eval()
 
-    checkpoint = torch.load(args.ckpt, map_location=args.device)
+    checkpoint = torch.load(args.condition_model, map_location=args.device)
     model_args = checkpoint['args']
-
-    pad_id = tokenizer.pad_token_id
-    conditioning_model = Model(model_args, pad_id, tokenizer.vocab_size) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
+    conditioning_model = Model(model_args, tokenizer.pad_token_id, tokenizer.vocab_size) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
     conditioning_model.load_state_dict(checkpoint['state_dict']) # NOTE when loading state_dict for Model, size mismatch for marian_embed.weight: copying a param with shape torch.Size([65002, 300]) from checkpoint, the shape in current model is torch.Size([50266, 300])
-    # TODO first need to train discriminator with bart args
     conditioning_model = conditioning_model.to(args.device)
     conditioning_model.eval()
-    # print("=> loaded checkpoint '{}' (epoch {})"
-    #         .format(args.ckpt, checkpoint['epoch']))
-    # print('num params', num_params(conditioning_model))
+    
+    if args.verbose:
+        print("=> loaded checkpoint '{}' (epoch {})"
+            .format(args.condition_model, checkpoint['epoch']))
+        print('num params', num_params(conditioning_model))
+
 
     if args.debug: # dummy input for testing
         input_text = [

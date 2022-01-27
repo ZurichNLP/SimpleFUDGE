@@ -15,8 +15,9 @@ from model import Model
 from util import save_checkpoint, ProgressMeter, AverageMeter, num_params, pad_mask
 from constants import *
 
+import wandb
 
-def train(model, dataset, optimizer, criterion, epoch, args, data_start_index):
+def train(model, dataset, optimizer, criterion, epoch, args, data_start_index, logger=None):
     model.train()
     if data_start_index == 0:
         dataset.shuffle('train', seed=epoch + args.seed)
@@ -49,13 +50,15 @@ def train(model, dataset, optimizer, criterion, epoch, args, data_start_index):
         loss.backward()
         optimizer.step()
         loss_meter.update(loss.detach(), len(labels))
+        if logger is not None:
+            logger.log({'train_loss': loss})
         if batch_num % args.train_print_freq == 0:
             progress.display(batch_num)
     progress.display(total_length)
     return data_start_index
 
 
-def validate(model, dataset, criterion, epoch, args):
+def validate(model, dataset, criterion, epoch, args, logger):
     model.eval()
     random.seed(0)
     loader = dataset.loader('val', num_workers=args.num_workers)
@@ -78,7 +81,6 @@ def validate(model, dataset, criterion, epoch, args):
                 # report prediction accuracy
                 # https://discuss.pytorch.org/t/when-do-i-turn-prediction-numbers-into-1-and-0-for-binary-classification/130075
                 acc = ((scores.flatten()[length_mask.flatten()==1] > 0.0) == expanded_labels.flatten().float()[length_mask.flatten()==1]).float().mean()
-                # breakpoint()
             elif args.task in ['iambic', 'newline']:
                 use_indices = classification_targets.flatten() != -1
                 loss = criterion(scores.flatten()[use_indices], classification_targets.flatten().float()[use_indices])
@@ -86,10 +88,11 @@ def validate(model, dataset, criterion, epoch, args):
                 loss = criterion(scores.flatten(), labels.flatten().float())
             loss_meter.update(loss.detach(), len(labels))
             acc_meter.update(acc.detach(), len(labels))
+            if logger is not None:
+                logger.log({'validation_loss': loss})
             # if batch_num % args.train_print_freq == 0:
             #     progress.display(batch_num)
     progress.display(total_length)
-    # breakpoint()
     # print(loss_meter.avg)
     return loss_meter.avg
 
@@ -97,6 +100,7 @@ def validate(model, dataset, criterion, epoch, args):
 def main(args):
     dataset = Dataset(args)
     os.makedirs(args.save_dir, exist_ok=True)
+
     with open(os.path.join(args.save_dir, 'dataset_info'), 'wb') as wf:
         pickle.dump(dataset.dataset_info, wf)
     if args.task == 'rhyme':
@@ -144,17 +148,23 @@ def main(args):
         data_start_index = 0
     print('num params', num_params(model))
     criterion = nn.BCEWithLogitsLoss().to(args.device)
+
+    # initialise logger through wandb if project space
+    # proand not a training run
+    logger = wandb.init(project=args.wandb) if (args.wandb is not None) and (not args.evaluate) else None
+    if logger is not None:
+        wandb.config.update(args)
     
     if args.evaluate:
         epoch = 0
-        validate(model, dataset, criterion, epoch, args)
+        validate(model, dataset, criterion, epoch, args, logger)
         return
     for epoch in range(args.epochs):
         print("TRAINING: Epoch {} at {}".format(epoch, time.ctime()))
-        data_start_index = train(model, dataset, optimizer, criterion, epoch, args, data_start_index)
-        if epoch > 0 and epoch % args.validation_freq == 0:
+        data_start_index = train(model, dataset, optimizer, criterion, epoch, args, data_start_index, logger)
+        if epoch % args.validation_freq == 0:
             print("VALIDATION: Epoch {} at {}".format(epoch, time.ctime()))
-            metric = validate(model, dataset, criterion, epoch, args)
+            metric = validate(model, dataset, criterion, epoch, args, logger)
 
             if not args.debug:
                 if metric < best_val_metric:
@@ -168,14 +178,15 @@ def main(args):
                         'data_start_index': data_start_index,
                         'args': args
                     }, os.path.join(args.save_dir, 'model_best.pth.tar'))
-                save_checkpoint({
-                    'epoch': epoch,
-                    'state_dict': model.state_dict(),
-                    'best_metric': metric,
-                    'optimizer': optimizer.state_dict(),
-                    'data_start_index': data_start_index,
-                    'args': args
-                }, os.path.join(args.save_dir, 'model_epoch' + str(epoch) + '.pth.tar'))
+                # don't save all checkpoints!
+                # save_checkpoint({
+                #     'epoch': epoch,
+                #     'state_dict': model.state_dict(),
+                #     'best_metric': metric,
+                #     'optimizer': optimizer.state_dict(),
+                #     'data_start_index': data_start_index,
+                #     'args': args
+                # }, os.path.join(args.save_dir, 'model_epoch' + str(epoch) + '.pth.tar'))
 
 
 if __name__=='__main__':
@@ -184,7 +195,7 @@ if __name__=='__main__':
     # DATA
     parser.add_argument('--task', type=str, required=True, choices=['iambic', 'rhyme', 'newline', 'topic', 'formality', 'simplify'])
     parser.add_argument('--data_dir', type=str, required=True)
-    parser.add_argument('--glove_file', type=str, help='glove embedding init, for topic task')
+    parser.add_argument('--glove', type=str, help='glove embedding init, for topic task or `True` for loading embeds from gensim for simplification')
 
     # SAVE/LOAD
     parser.add_argument('--save_dir', type=str, required=True, help='where to save ckpts')
@@ -194,7 +205,7 @@ if __name__=='__main__':
 
     # TRAINING
     parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--epochs', type=int, default=100)
+    parser.add_argument('--epochs', type=int, default=8)
     parser.add_argument('--epoch_max_len', type=int, default=None, help='max batches per epoch if set, for more frequent validation')
     parser.add_argument('--validation_freq', type=int, default=1, help='validate every X epochs')
     parser.add_argument('--lr', type=float, default=1e-3, help='Adam learning rate')
@@ -208,8 +219,9 @@ if __name__=='__main__':
     parser.add_argument('--train_print_freq', type=int, default=1000000, help='how often to print metrics (every X batches)')
 
     # added for ATS
+    parser.add_argument('--model_path_or_name', type=str, default=None, help='pre-trained/fine-tuned model directory with tokenizer to use.')
     parser.add_argument('--tgt_level', type=int, default=4, help='simplification level corresponding to newsela metadata')
-
+    parser.add_argument('--wandb', type=str, default=None, help='wandb project space for logging')
 
     args = parser.parse_args()
 

@@ -40,6 +40,16 @@ python predict_simplify_as_logits_processor.py --ckpt /srv/scratch6/kew/fudge/ck
 
 ```
 
+## Setup
+
+```
+conda create -n fudge python=3.8.5 -y
+pip install -r requirements.txt
+
+git clone git@github.com:feralvam/easse.git
+cd easse
+pip install -e .
+```
 
 
 <!-- ## TODOs

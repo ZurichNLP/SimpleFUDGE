@@ -36,6 +36,9 @@ class FUDGELogits(LogitsProcessor):
         Rescoring of logits runs over each beam hypothesis
         individually, i.e. considers each beam hyp as a
         batch of size 1.
+        
+        :input_ids: shape([num_beams*batch_size, seq_len])
+        :scores: shape([num_beams*batch_size, vocab_size])
         """        
 
         # for every beam (partially generated sentence)
@@ -61,21 +64,14 @@ class FUDGELogits(LogitsProcessor):
             expanded_lengths = torch.LongTensor([[cur_len for _ in range(self.precondition_topk)] for _ in range(batch_size)]).to(scores.device) # [batch_size, topk]
             
             # apply conditioning
-            if self.condition_lambda == 0:
-                condition_logits = torch.zeros_like(top_logits).float()
-            else:
-                condition_logits = self.conditioning_model(
-                    tplus1_candidates, # batch*topk x seq+1
-                    expanded_lengths.flatten(0, 1), # batch*topk
-                    None,
-                    None,
-                    None
-                    )
-                condition_logits = condition_logits.view(batch_size, self.precondition_topk, -1)[:, :, -1] # batch x topk of last FUDGE pred
-                # breakpoint()
-                # TODO: check logic applied to logits
-                condition_logits = condition_logits - torch.log(1 + torch.exp(condition_logits)) # get correct log probs
-                # condition_logits = - torch.log(1 + torch.exp(condition_logits)) # for informal
+            condition_logits = self.conditioning_model(
+                tplus1_candidates, # [batch*topk, seq+1]
+                expanded_lengths.flatten(0, 1), # [batch*topk]
+                None, None, None
+                )
+            condition_logits = condition_logits.view(batch_size, self.precondition_topk, -1)[:, :, -1] # batch x topk of last FUDGE pred
+            
+            condition_logits = condition_logits - torch.log(1 + torch.exp(condition_logits)) # get correct log probs
             
             fudge_logits = (top_logits + self.condition_lambda * condition_logits).squeeze()
             
@@ -93,7 +89,10 @@ class FUDGELogits(LogitsProcessor):
 
     def fudge_v(self, input_ids, scores):
         """
-        
+        Vectorized implementation of FUDGE as a
+        stand-alone function used as a LogitsProcessor. This
+        is much fast than the non-vectorized version above.
+
         :input_ids: shape([num_beams*batch_size, seq_len])
         :scores: shape([num_beams*batch_size, vocab_size])
         """
@@ -116,21 +115,15 @@ class FUDGELogits(LogitsProcessor):
         expanded_lengths = torch.LongTensor([[cur_len for _ in range(self.precondition_topk)] for _ in range(self.batch_size)]).to(scores.device)
         
         # apply conditioning
-        if self.condition_lambda == 0:
-            condition_logits = torch.zeros_like(top_logits).float()
-        else:
-            condition_logits = self.conditioning_model(
-                tplus1_candidates, # batch*topk x seq+1
-                expanded_lengths.flatten(0, 1), # batch*topk
-                None,
-                None,
-                None
-                )
+        condition_logits = self.conditioning_model(
+            tplus1_candidates, # # [batch*topk, seq+1]
+            expanded_lengths.flatten(0, 1), # [batch*topk]
+            None, None, None
+            )
 
-            condition_logits = condition_logits.view(self.batch_size, self.precondition_topk, -1)[:, :, -1].repeat_interleave(num_beams, dim=0) # shape: [num_beams*batch_size, topk] of last FUDGE pred
-            
-            # TODO: check logic applied to logits
-            condition_logits = condition_logits - torch.log(1 + torch.exp(condition_logits)) # get correct log probs
+        condition_logits = condition_logits.view(self.batch_size, self.precondition_topk, -1)[:, :, -1].repeat_interleave(num_beams, dim=0) # shape: [num_beams*batch_size, topk] of last FUDGE pred
+        
+        condition_logits = condition_logits - torch.log(1 + torch.exp(condition_logits)) # get correct log probs
         
         fudge_logits = (top_logits + self.condition_lambda * condition_logits)
         
