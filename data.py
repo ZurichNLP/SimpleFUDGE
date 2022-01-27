@@ -136,60 +136,91 @@ class Dataset:
         ####################
 
         elif self.simplify:
+
+            ###########
+            # WIKIPEDIA
+            ###########
+
+            self.splits = {'train': [], 'valid': [], 'test': []}
+            label_map = {'enwiki': 0, 'simplewiki': 1} # simple is positive class
             
-            simp_levels = [0, 1, 2, 3, 4, 5] 
-            # simplification levels (aggregated grades in Newsela)
-            # 0 = complex (no simplification), 5 = most simplifified
-
-            self.vocab['placeholder'] = 1 # anything so we don't crash
+            n_lines = 100000
+            with open(os.path.join(args.data_dir, f'enwiki_simplewiki.csv'), 'r') as rf:
+                for i, line in enumerate(rf):
+                    text, fkgl_score, source = line.strip().split('\t')
+                    for lp in split_line(text.strip()):
+                        if n_lines % i == 0:
+                            self.splits['test'].append((lp, label_map[source]))
+                        elif n_lines % i == 1:
+                            self.splits['valid'].append((lp, label_map[source]))
+                        else:
+                            self.splits['train'].append((lp, label_map[source]))
             
-            # collect positive samples
-            pos_train, pos_val, pos_test = [], [], []
-            for split in ['train', 'test', 'valid']:
-                with open(os.path.join(args.data_dir, f'{split}_{str(args.tgt_level)}.txt'), 'r') as rf:
-                    for i, line in enumerate(rf):
-                        #line_parts = split_line(line.strip())
-                        line_parts = [line.strip()]
-                        for lp in line_parts:
-                            if split == 'test':
-                                pos_test.append((lp, 1))
-                            elif split == 'valid':
-                                pos_val.append((lp, 1))
-                            else:
-                                pos_train.append((lp, 1))
-
+            print('dataset balance:')
+            simple_instances = sum(1 for i in self.splits['train'] if i[1] == 1)
+            print(f"complex instances in train: {len(self.splits['train']) - simple_instances}")
+            print(f"simple instances in train: {simple_instances}")
             
-            # collect all negative samples, i.e. sentences
-            # from more complex language levels in Newsela
-            neg_train, neg_val, neg_test = [], [], []
-            # neg_simp_levels = list(filter(lambda x: x < args.tgt_level, simp_levels))
-            neg_simp_levels = [0]
-            for split in ['train', 'test', 'valid']:
-                for simp_level in neg_simp_levels:
-                    with open(os.path.join(args.data_dir, f'{split}_{str(simp_level)}.txt'), 'r') as rf:
-                        for i, line in enumerate(rf):
-                            #line_parts = split_line(line.strip())
-                            line_parts = [line.strip()]
-                            for lp in line_parts:
-                                if split == 'test':
-                                    neg_test.append((lp, 0))
-                                elif split == 'valid':
-                                    neg_val.append((lp, 0))
-                                else:
-                                    neg_train.append((lp, 0))
-
-            # shuffle collected negative samples
-            random.shuffle(neg_train)
-            random.shuffle(neg_val)
-            random.shuffle(neg_test)
-            self.splits = {}
-            self.splits['train'] = pos_train + neg_train[:len(pos_train)]
-            self.splits['val'] = pos_val + neg_val[:len(pos_val)]
-            self.splits['test'] = pos_test + neg_test[:len(pos_test)]
-
             random.shuffle(self.splits['train'])
             random.shuffle(self.splits['val'])
             random.shuffle(self.splits['test'])
+
+            # #########
+            # # NEWSELA
+            # #########
+            # simp_levels = [0, 1, 2, 3, 4, 5] 
+            # # simplification levels (aggregated grades in Newsela)
+            # # 0 = complex (no simplification), 5 = most simplifified
+
+            # self.vocab['placeholder'] = 1 # anything so we don't crash
+            
+            # # collect positive samples
+            # pos_train, pos_val, pos_test = [], [], []
+            # for split in ['train', 'test', 'valid']:
+            #     with open(os.path.join(args.data_dir, f'{split}_{str(args.tgt_level)}.txt'), 'r') as rf:
+            #         for i, line in enumerate(rf):
+            #             #line_parts = split_line(line.strip())
+            #             line_parts = [line.strip()]
+            #             for lp in line_parts:
+            #                 if split == 'test':
+            #                     pos_test.append((lp, 1))
+            #                 elif split == 'valid':
+            #                     pos_val.append((lp, 1))
+            #                 else:
+            #                     pos_train.append((lp, 1))
+
+            
+            # # collect all negative samples, i.e. sentences
+            # # from more complex language levels in Newsela
+            # neg_train, neg_val, neg_test = [], [], []
+            # # neg_simp_levels = list(filter(lambda x: x < args.tgt_level, simp_levels))
+            # neg_simp_levels = [0]
+            # for split in ['train', 'test', 'valid']:
+            #     for simp_level in neg_simp_levels:
+            #         with open(os.path.join(args.data_dir, f'{split}_{str(simp_level)}.txt'), 'r') as rf:
+            #             for i, line in enumerate(rf):
+            #                 #line_parts = split_line(line.strip())
+            #                 line_parts = [line.strip()]
+            #                 for lp in line_parts:
+            #                     if split == 'test':
+            #                         neg_test.append((lp, 0))
+            #                     elif split == 'valid':
+            #                         neg_val.append((lp, 0))
+            #                     else:
+            #                         neg_train.append((lp, 0))
+
+            # # shuffle collected negative samples
+            # random.shuffle(neg_train)
+            # random.shuffle(neg_val)
+            # random.shuffle(neg_test)
+            # self.splits = {}
+            # self.splits['train'] = pos_train + neg_train[:len(pos_train)]
+            # self.splits['val'] = pos_val + neg_val[:len(pos_val)]
+            # self.splits['test'] = pos_test + neg_test[:len(pos_test)]
+
+            # random.shuffle(self.splits['train'])
+            # random.shuffle(self.splits['val'])
+            # random.shuffle(self.splits['test'])
 
         ####################
 
