@@ -27,7 +27,7 @@ def assign_newsela_splits(csv_file):
     the training and test data"
 
     NOTE: currently no attempt is made to ensure an even
-    distribut of simplified level texts in splits.
+    distribution of simplified level texts in splits.
     """
 
     outpath = Path(csv_file).parent

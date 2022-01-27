@@ -14,7 +14,6 @@ from pathlib import Path
 import argparse
 from datasets import load_dataset
 import pandas as pd
-# from nltk.tokenize.moses import MosesDetokenizer
 from sacremoses import MosesDetokenizer
 
 SEED = 23
@@ -109,12 +108,24 @@ def save_newsela_to_disk(newsela_path, outpath, detok=True, tgt_levels=['V1', 'V
                         c += 1
         print(f'NEWSELA V0-{tgt_level} ({c} items) saved to disk ({outfile})')
 
-def extract_aligned_wiki(outpath):
+def extract_aligned_wiki(wiki_auto_path, outpath, sim_threshold=0.8):
+    """
+    extract only aligned sentences from wiki manual 
+    """
 
-    wiki = load_dataset('wiki_auto')
+    for split in ['train', 'test', 'dev']:
+        wiki_man = Path(wiki_auto_path) / 'wiki-manual' / f'{split}.tsv'
+        outfile = Path(outpath) / f'wiki_manual_{split}.tsv'
+        c = 0
+        with open(wiki_man, 'r', encoding='utf8') as inf:
+            with open(outfile, 'w', encoding='utf8') as outf:
+                for line in inf:
+                    label, id1, id2, simple_sent, complex_sent, gleu_score = line.strip().split('\t')
+                    if label == 'aligned' and float(gleu_score) < sim_threshold:
+                        outf.write(f'{complex_sent}\t{simple_sent}\n')
+                        c += 1
 
-    breakpoint()
-
+        print(f'WIKI-MANUAL {split} ({c} items) saved to disk ({outfile})')
     
 
 
@@ -122,15 +133,15 @@ if __name__ == '__main__':
     args = set_args()
 
     Path(args.outpath).mkdir(parents=True, exist_ok=True)
-    # breakpoint()
-    # if 'turk' in args.datasets:
-    #     save_turk_to_disk(args.outpath)
 
-    # if 'asset' in args.datasets:
-    #     save_asset_to_disk(args.outpath)
+    if 'turk' in args.datasets:
+        save_turk_to_disk(args.outpath)
 
-    # if 'newsela' in args.datasets:
-    #     save_newsela_to_disk(args.newsela_path, args.outpath)
+    if 'asset' in args.datasets:
+        save_asset_to_disk(args.outpath)
+
+    if 'newsela' in args.datasets:
+        save_newsela_to_disk(args.newsela_path, args.outpath)
 
     if 'wiki_auto' in args.datasets:
-        extract_aligned_wiki(args.outpath)
+        extract_aligned_wiki(args.wiki_auto_path, args.outpath)
