@@ -71,7 +71,7 @@ def infer_outfile_name_from_args(args):
     filename += '.txt'
 
     # expected format: outpath/generationmodel/testset/monsterhparamstring
-    outfile = Path(args.outpath) / Path(args.generation_model).parts[-2] / Path(args.infile).stem / filename
+    outfile = Path(args.outpath) / Path(args.generation_model).parts[-1] / Path(args.infile).stem / filename
     # create output dir if not exists already 
     Path(outfile).parent.mkdir(parents=True, exist_ok=True)
 
@@ -94,7 +94,6 @@ def main(args):
     # load fudge conditioning model
     checkpoint = torch.load(args.condition_model, map_location=args.device)
     model_args = checkpoint['args']
-    breakpoint()
     conditioning_model = Model(model_args, tokenizer.pad_token_id, tokenizer.vocab_size)
     conditioning_model.load_state_dict(checkpoint['state_dict'])
     conditioning_model = conditioning_model.to(args.device)

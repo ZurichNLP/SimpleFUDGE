@@ -5,6 +5,7 @@ from pathlib import Path
 import pickle
 from collections import defaultdict, namedtuple
 import string
+import pandas as pd
 
 os.environ['TOKENIZERS_PARALLELISM'] = 'false' # turn off since we're using multiple threads for loading anyway
 
@@ -22,16 +23,11 @@ DatasetInfo = namedtuple('DatasetInfo',
 RhymeInfo = namedtuple('RhymeInfo', 
                 ['word2rhyme_group', 'rhyme_group_counts', 'rhyme_groups', 'index2rhyme_group', 'rhyme_group2index', 'total_rhyme_groups'])
 
-def glove_encode(glove_encoder, word):
-    return glove_encoder(word)
-
-
 
 def checker(string):
     # string = string.replace(' ', '')
     string = string.replace('Ġ', '') # special char for BPE
     return string.strip().lower()
-
 
 ## Pytorch
 def map_tokens_to_glove(tokenizer, embedding_file, glove_string):
@@ -128,6 +124,11 @@ def split_line(line):
     line = line.split()
     return [' '.join(line[:i]) for i in range(len(line)) if i > 0]
 
+def split_and_label_for_fudge(line, label, min_length=1, max_length=256):
+    line = line.split()
+    return [(' '.join(line[:i]), label) for i in range(len(line)) if min_length < i < max_length]
+
+
 class Dataset:
     def __init__(self, args):
         print('loading data')
@@ -153,7 +154,6 @@ class Dataset:
                 tokenizer_name = TOPIC_MODEL_STRING
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         
-        # TODO remove default adding pad token
         if not self.tokenizer.pad_token:            
             self.tokenizer.add_special_tokens({'pad_token': PAD_TOKEN})
             self.gpt_pad_id = self.tokenizer.encode(PAD_TOKEN, add_special_tokens=False)[0] # actually just the vocab size
@@ -189,87 +189,111 @@ class Dataset:
             ###########
             # WIKIPEDIA
             ###########
+            # breakpoint()
+            if 'wiki' in args.data_dir:
+                self.splits = {'train': [], 'val': [], 'test': []}
+                
+                self.vocab['placeholder'] = 1 # anything so we don't crash
+                max_train_lines = 1_000_000
+                max_test_val_lines = 5000
 
-            self.splits = {'train': [], 'valid': [], 'test': []}
-            label_map = {'enwiki': 0, 'simplewiki': 1} # simple is positive class
-            
-            n_lines = 100000
-            with open(os.path.join(args.data_dir, f'enwiki_simplewiki.csv'), 'r') as rf:
-                for i, line in enumerate(rf):
-                    text, fkgl_score, source = line.strip().split('\t')
-                    for lp in split_line(text.strip()):
-                        if n_lines % i == 0:
-                            self.splits['test'].append((lp, label_map[source]))
-                        elif n_lines % i == 1:
-                            self.splits['valid'].append((lp, label_map[source]))
-                        else:
-                            self.splits['train'].append((lp, label_map[source]))
-            
-            print('dataset balance:')
-            simple_instances = sum(1 for i in self.splits['train'] if i[1] == 1)
-            print(f"complex instances in train: {len(self.splits['train']) - simple_instances}")
-            print(f"simple instances in train: {simple_instances}")
-            
-            random.shuffle(self.splits['train'])
-            random.shuffle(self.splits['val'])
-            random.shuffle(self.splits['test'])
+                df = pd.read_csv(os.path.join(args.data_dir, 'enwiki_simplewiki.csv'), sep='\t', header=0)
+                df['source'].replace(['enwiki', 'simplewiki'], [0, 1], inplace=True)
+                
+                pos_class = df[df['source'] == 1].reset_index(drop=True)
+                neg_class = df[df['source'] == 0].reset_index(drop=True)
 
-            # #########
-            # # NEWSELA
-            # #########
-            # simp_levels = [0, 1, 2, 3, 4, 5] 
-            # # simplification levels (aggregated grades in Newsela)
-            # # 0 = complex (no simplification), 5 = most simplifified
+                for i, (text, fkgl_score, source) in pos_class.iterrows():
+                    if len(self.splits['test']) < (max_test_val_lines // 2):
+                        self.splits['test'].extend(split_and_label_for_fudge(text, source))
+                    elif len(self.splits['val']) < (max_test_val_lines // 2):
+                        self.splits['val'].extend(split_and_label_for_fudge(text, source))
+                    elif len(self.splits['train']) < (max_train_lines // 2):
+                        self.splits['train'].extend(split_and_label_for_fudge(text, source))
+                    else:
+                        break
+                
+                # update max number of train lines if necessary
+                # to ensure balanced dataset
+                max_train_lines = min(max_train_lines, len(self.splits['train']*2))
 
-            # self.vocab['placeholder'] = 1 # anything so we don't crash
-            
-            # # collect positive samples
-            # pos_train, pos_val, pos_test = [], [], []
-            # for split in ['train', 'test', 'valid']:
-            #     with open(os.path.join(args.data_dir, f'{split}_{str(args.tgt_level)}.txt'), 'r') as rf:
-            #         for i, line in enumerate(rf):
-            #             #line_parts = split_line(line.strip())
-            #             line_parts = [line.strip()]
-            #             for lp in line_parts:
-            #                 if split == 'test':
-            #                     pos_test.append((lp, 1))
-            #                 elif split == 'valid':
-            #                     pos_val.append((lp, 1))
-            #                 else:
-            #                     pos_train.append((lp, 1))
+                for i, (text, fkgl_score, source) in neg_class.iterrows():
+                    if len(self.splits['test']) < max_test_val_lines:
+                        self.splits['test'].extend(split_and_label_for_fudge(text, source))
+                    elif len(self.splits['val']) < max_test_val_lines:
+                        self.splits['val'].extend(split_and_label_for_fudge(text, source))
+                    elif len(self.splits['train']) < max_train_lines:
+                        self.splits['train'].extend(split_and_label_for_fudge(text, source))
+                    else:
+                        break
+                
+                print('dataset balance:')
+                for split, items in self.splits.items():
+                    t_cnt = len(self.splits[split])
+                    s_cnt = sum(1 for i in self.splits[split] if i[1] == 1)
+                    print(f"complex / simple instances in {split} of size {t_cnt}: {t_cnt - s_cnt} / {s_cnt}")
+                
+                random.shuffle(self.splits['train'])
+                random.shuffle(self.splits['val'])
+                random.shuffle(self.splits['test'])
 
-            
-            # # collect all negative samples, i.e. sentences
-            # # from more complex language levels in Newsela
-            # neg_train, neg_val, neg_test = [], [], []
-            # # neg_simp_levels = list(filter(lambda x: x < args.tgt_level, simp_levels))
-            # neg_simp_levels = [0]
-            # for split in ['train', 'test', 'valid']:
-            #     for simp_level in neg_simp_levels:
-            #         with open(os.path.join(args.data_dir, f'{split}_{str(simp_level)}.txt'), 'r') as rf:
-            #             for i, line in enumerate(rf):
-            #                 #line_parts = split_line(line.strip())
-            #                 line_parts = [line.strip()]
-            #                 for lp in line_parts:
-            #                     if split == 'test':
-            #                         neg_test.append((lp, 0))
-            #                     elif split == 'valid':
-            #                         neg_val.append((lp, 0))
-            #                     else:
-            #                         neg_train.append((lp, 0))
+            #########
+            # NEWSELA
+            #########
+            elif 'newsela' in args.data_dir:
+                simp_levels = [0, 1, 2, 3, 4, 5] 
+                # simplification levels (aggregated grades in Newsela)
+                # 0 = complex (no simplification), 5 = most simplifified
 
-            # # shuffle collected negative samples
-            # random.shuffle(neg_train)
-            # random.shuffle(neg_val)
-            # random.shuffle(neg_test)
-            # self.splits = {}
-            # self.splits['train'] = pos_train + neg_train[:len(pos_train)]
-            # self.splits['val'] = pos_val + neg_val[:len(pos_val)]
-            # self.splits['test'] = pos_test + neg_test[:len(pos_test)]
+                self.vocab['placeholder'] = 1 # anything so we don't crash
+                
+                # collect positive samples
+                pos_train, pos_val, pos_test = [], [], []
+                for split in ['train', 'test', 'valid']:
+                    with open(os.path.join(args.data_dir, f'{split}_{str(args.tgt_level)}.txt'), 'r') as rf:
+                        for i, line in enumerate(rf):
+                            #line_parts = split_line(line.strip())
+                            line_parts = [line.strip()]
+                            for lp in line_parts:
+                                if split == 'test':
+                                    pos_test.append((lp, 1))
+                                elif split == 'valid':
+                                    pos_val.append((lp, 1))
+                                else:
+                                    pos_train.append((lp, 1))
 
-            # random.shuffle(self.splits['train'])
-            # random.shuffle(self.splits['val'])
-            # random.shuffle(self.splits['test'])
+                
+                # collect all negative samples, i.e. sentences
+                # from more complex language levels in Newsela
+                neg_train, neg_val, neg_test = [], [], []
+                # neg_simp_levels = list(filter(lambda x: x < args.tgt_level, simp_levels))
+                neg_simp_levels = [0]
+                for split in ['train', 'test', 'valid']:
+                    for simp_level in neg_simp_levels:
+                        with open(os.path.join(args.data_dir, f'{split}_{str(simp_level)}.txt'), 'r') as rf:
+                            for i, line in enumerate(rf):
+                                #line_parts = split_line(line.strip())
+                                line_parts = [line.strip()]
+                                for lp in line_parts:
+                                    if split == 'test':
+                                        neg_test.append((lp, 0))
+                                    elif split == 'valid':
+                                        neg_val.append((lp, 0))
+                                    else:
+                                        neg_train.append((lp, 0))
+
+                # shuffle collected negative samples
+                random.shuffle(neg_train)
+                random.shuffle(neg_val)
+                random.shuffle(neg_test)
+                self.splits = {}
+                self.splits['train'] = pos_train + neg_train[:len(pos_train)]
+                self.splits['val'] = pos_val + neg_val[:len(pos_val)]
+                self.splits['test'] = pos_test + neg_test[:len(pos_test)]
+
+                random.shuffle(self.splits['train'])
+                random.shuffle(self.splits['val'])
+                random.shuffle(self.splits['test'])
 
         ####################
 
@@ -373,6 +397,10 @@ class Dataset:
             print('total words', self.total_words)
             print('vocab size', len(self.index2word))
 
+        # pickle dataset for later
+        with open(os.path.join(args.save_dir, 'dataset_splts.pkl'), 'wb') as pklf:
+            pickle.dump(self.splits, pklf, pickle.HIGHEST_PROTOCOL)
+        print(f'saved data splits in {args.save_dir}')
 
     def shuffle(self, split, seed=None):
         assert split in ['train', 'val', 'test']
