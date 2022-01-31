@@ -16,6 +16,25 @@ git clone git@github.com:nishkalavallabhi/OneStopEnglishCorpus.git ./data/onesto
 1,130 news articles manually simplified to up to 5 levels of simplicity
 Access must be requested at https://newsela.com/data
 
+For the sentence alignments, we use the high-quality,
+manually aligned splits from Jiang et al. (2020).
+
+```
+for split in train test dev
+do
+python extract_aligned_sents_wiki_newsela_manual.py \
+--infile /srv/scratch6/kew/ats/data/en/wiki-auto/wiki-manual/{split}.tsv \
+--outfile /srv/scratch6/kew/ats/data/en/aligned/wiki_manual_{split}.tsv \
+--complex_level 0 --simple_level 1 --wiki
+
+python extract_aligned_sents_wiki_newsela_manual.py \
+--infile /srv/scratch6/kew/ats/data/en/newsela-auto/newsela-manual/all/{split}.tsv \
+--outfile /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v4_{split}.tsv \
+--complex_level 0 --simple_level 4
+done
+```
+
+
 #### Turk Corpus (Xu et al. 2016)
 
 Corpus of (mainly) lexical paraphrasing from English
