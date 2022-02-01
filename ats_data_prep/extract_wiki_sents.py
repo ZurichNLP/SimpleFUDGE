@@ -6,7 +6,7 @@
 """
 Example Call:
 
-    python extract_sentences_from_wiki_corpus.py /srv/scratch6/kew/ats/data/en/simplewiki/simplewiki.txt /srv/scratch6/kew/ats/data/en/simplewiki/simplewiki_sents.txt
+    python extract_wiki_sents.py /srv/scratch6/kew/ats/data/en/simplewiki/simplewiki.txt /srv/scratch6/kew/ats/data/en/simplewiki/simplewiki_sents.txt
 
 """
 

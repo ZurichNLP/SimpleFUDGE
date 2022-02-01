@@ -13,8 +13,8 @@ import random
 from pathlib import Path
 import argparse
 from datasets import load_dataset
-import pandas as pd
-from sacremoses import MosesDetokenizer
+# import pandas as pd
+# from sacremoses import MosesDetokenizer
 
 SEED = 23
 

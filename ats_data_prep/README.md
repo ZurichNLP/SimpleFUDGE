@@ -1,19 +1,33 @@
 # Data Processing for Simple FUDGE
 
+### To prepare data for training FUDGE discriminators for simplification
 
-### Download and prepare relevant corpora
+For wiki data (on a large server):
+```
+bash prepare_wiki_data_for_fudge.sh
+```
 
-#### OneStopEnglish Corpus (Vajjala and Lučić, 2018) 
+For newsela data (ensuring you have access to the newsela
+corpus):
+```
+bash prepare_newsela_data_for_fudge.sh
+```
+Once data is prepared, you can train a new discriminator
+following the commands in the README one level up.
+
+### Download and prepare relevant corpora for testing/evaluation
+
+<!-- #### OneStopEnglish Corpus (Vajjala and Lučić, 2018) 
 
 https://aclanthology.org/W18-0535.pdf
 
 ```
 git clone git@github.com:nishkalavallabhi/OneStopEnglishCorpus.git ./data/onestop
-```
+``` -->
 
 #### Newsela Corpus (Xu et al. 2015)
 
-1,130 news articles manually simplified to up to 5 levels of simplicity
+News articles manually simplified to up to 5 levels of simplicity
 Access must be requested at https://newsela.com/data
 
 For the sentence alignments, we use the high-quality,
@@ -65,6 +79,7 @@ https://huggingface.co/datasets/asset for full description.
 ```
 git clone git@github.com:facebookresearch/asset.git ./data/asset
 ```
+
 
 
 <!-- - TURK test (Xu et al. 2016) 

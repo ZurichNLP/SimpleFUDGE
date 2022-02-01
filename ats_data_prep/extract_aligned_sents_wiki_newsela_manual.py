@@ -115,7 +115,10 @@ def test():
     print(extract_pairs(df, ['chinook-recognition.en-0-0-2']))
 
 def parse_newsela_data(args):
-    # infile = '/srv/scratch6/kew/ats/data/en/newsela-auto/newsela-manual/all/test.tsv'
+    """
+    Processes annotated alignment file from Newsela-Manual (e.g. `newsela-auto/newsela-manual/all/test.tsv`)
+    """
+
     df = pd.read_csv(args.infile, sep='\t', header=None, names=['label', 'sid', 'cid', 'ssent', 'csent'], quoting=csv.QUOTE_NONE)
     if args.verbose:
         print(f'DF contains {len(df)} items')
@@ -128,7 +131,7 @@ def parse_newsela_data(args):
     
     if args.verbose:
         print(len(root_nodes))
-        print(root_nodes[:10])
+        print(root_nodes[:5], '...')
 
     # collect alignments
     alignments = []
@@ -154,7 +157,10 @@ def parse_newsela_data(args):
     print(f'Finished writing {len(alignments)} alignments to {args.outfile}')
 
 def parse_wiki_data(args, max_sim=0.6):
-    # infile = '/srv/scratch6/kew/ats/data/en/newsela-auto/newsela-manual/all/test.tsv'
+    """
+    Processes annotated alignment file from Wiki-Manual (e.g. `wiki-auto/wiki-manual/test.tsv`)
+    """
+    
     df = pd.read_csv(args.infile, sep='\t', header=None, names=['label', 'sid', 'cid', 'ssent', 'csent', 'gleu_score'], quoting=csv.QUOTE_NONE)
     if args.verbose:
         print(f'DF contains {len(df)} items')
@@ -172,7 +178,7 @@ def parse_wiki_data(args, max_sim=0.6):
 
     if args.verbose:
         print(len(root_nodes))
-        print(root_nodes[:10])
+        print(root_nodes[:5], '...')
 
     # collect alignments
     alignments = []
