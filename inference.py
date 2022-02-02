@@ -4,7 +4,11 @@
 """
 Example Call:
 
-    python evaluate_simplify.py --condition_model /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar --dataset_info /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/dataset_info --generation_model /srv/scratch6/kew/paraphrase/models/bart_large_paraNMT_filt_fr/best_model --infile /srv/scratch6/kew/ats/data/en/aligned/turk_test.tsv --batch_size 10 --condition_lambda 0 --batch_size 10
+    python inference.py \
+        --condition_model /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar \
+        --generation_model /srv/scratch6/kew/ats/fudge/generators/bart_large_paraNMT_filt_fr/ \
+        --infile /srv/scratch6/kew/ats/data/en/aligned/turk_test.tsv \
+        --batch_size 10 --condition_lambda 0
 
 """
 
@@ -27,7 +31,7 @@ from data import Dataset
 from model import Model
 from util import save_checkpoint, ProgressMeter, AverageMeter, num_params
 from constants import *
-from predict_simplify_lp import predict_simplicity, generation_arg_parser
+from predict_simplify import predict_simplicity, generation_arg_parser
 
 def quick_lc(infile):
     lc = 0
@@ -83,8 +87,8 @@ def infer_outfile_name_from_args(args):
 
 def main(args):
 
-    with open(args.dataset_info, 'rb') as rf:
-        dataset_info = pickle.load(rf)
+    # with open(args.dataset_info, 'rb') as rf:
+    #     dataset_info = pickle.load(rf)
     
     # load generator
     tokenizer = BartTokenizer.from_pretrained(args.generation_model)
@@ -106,6 +110,7 @@ def main(args):
 
     outfile = infer_outfile_name_from_args(args)
     
+    breakpoint()
     generated_texts = 0
     start_time = time.time()
     with tqdm(total=quick_lc(args.infile)) as pbar:
@@ -116,7 +121,7 @@ def main(args):
                     if not batch_lines:
                         break
                     batch_lines = list(map(preprocess_lines, batch_lines))
-                    batch_results = predict_simplicity(generator_model, tokenizer, conditioning_model, batch_lines, dataset_info, args)
+                    batch_results = predict_simplicity(generator_model, tokenizer, conditioning_model, batch_lines, args)
 
                     assert args.num_return_sequences == 1
                     generated_texts += len(batch_results)

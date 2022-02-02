@@ -35,7 +35,26 @@ python predict_simplify.py --ckpt /srv/scratch6/kew/fudge/ckpt/simplify/simplify
 Usage Examples
 
 ```
-python predict_simplify_as_logits_processor.py --ckpt /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar --dataset_info /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/dataset_info --precondition_topk 200 --condition_lambda 10 --vectorized --num_beams 4 --num_return_sequences 4 --soft
+python predict_simplify.py \
+    --condition_model /srv/scratch6/kew/ats/fudge/discriminators/newsela4_bart_glove/model_best.pth.tar \
+    --generation_model /srv/scratch6/kew/ats/fudge/generators/bart_large_paraNMT_filt_fr \
+    --precondition_topk 200 \
+    --condition_lambda 10 \
+    --vectorized \
+    --num_beams 4 \
+    --num_return_sequences 4 \
+    --soft
+
+python predict_simplify.py \
+    --condition_model /srv/scratch6/kew/ats/fudge/discriminators/wiki100M_bart_glove/model_best.pth.tar \
+    --generation_model /srv/scratch6/kew/ats/fudge/generators/bart_large_paraNMT_filt_fr \
+    --precondition_topk 200 \
+    --condition_lambda 10 \
+    --vectorized \
+    --num_beams 4 \
+    --num_return_sequences 4 \
+    --soft
+
 
 
 ```

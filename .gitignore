@@ -147,3 +147,6 @@ copy_of_bart_learns_to_rap_medium.py
 inference.py
 sanity_check_inference.py
 nohup*
+
+legacy/
+._*

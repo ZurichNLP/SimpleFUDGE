@@ -15,7 +15,7 @@ from tqdm import tqdm
 import torch
 
 from util import suppress_stdout
-from poetry_util import is_iambic, count_syllables, get_rhymes, get_rhyme_group
+# from poetry_util import is_iambic, count_syllables, get_rhymes, get_rhyme_group
 from constants import *
 
 DatasetInfo = namedtuple('DatasetInfo', 
@@ -53,10 +53,12 @@ def map_tokens_to_glove(tokenizer, embedding_file, glove_string):
         except:
             word = tokenizer.decode([i])
             null_words.add(word)
-            holder[i, :] = np.zeros((300))
+            # holder[i, :] = np.zeros((300), dtype=np.float32)
+            holder[i, :] = np.random.rand((300))
 
     # print(null_words)
-    print(f'Number of tokens initialised with zero verctor {len(null_words)}')
+    # print(f'Number of tokens initialised with zero verctor {len(null_words)}')
+    print(f'Number of token embeddings randomly initialised {len(null_words)}')
     np.save(file=str(embedding_file.with_suffix('')), arr=holder) # save for quicker loading later
 
     print('Table was generated...')
@@ -186,11 +188,17 @@ class Dataset:
 
         elif self.simplify:
 
+            outpath = Path(args.save_dir) / 'dataset_splts.pkl'
+            if outpath.exists():
+                with open(outpath, 'rb') as inf:
+                    self.splits = pickle.load(inf)
+                    print(f'loaded pre-compiled data splits from {outpath}')
+
             ###########
             # WIKIPEDIA
             ###########
-            # breakpoint()
-            if 'wiki' in args.data_dir:
+            elif 'wiki' in args.data_dir:
+
                 self.splits = {'train': [], 'val': [], 'test': []}
                 
                 self.vocab['placeholder'] = 1 # anything so we don't crash
@@ -199,11 +207,17 @@ class Dataset:
 
                 df = pd.read_csv(os.path.join(args.data_dir, 'enwiki_simplewiki.csv'), sep='\t', header=0)
                 df['source'].replace(['enwiki', 'simplewiki'], [0, 1], inplace=True)
-                
-                pos_class = df[df['source'] == 1].reset_index(drop=True)
-                neg_class = df[df['source'] == 0].reset_index(drop=True)
+                df.drop_duplicates(subset=['text'], keep='first', inplace=True) # remove duplicate sents
+                df = df[(df['fkgl'] != 0.0)]
+                df[(df['fkgl'] > 9.0) & (df['source'] == 1)]
+
+                # remove positive items above a threshold fkgl
+                pos_class = df[(df['fkgl'] <= 8.0) & (df['source'] == 1)].reset_index(drop=True)
+                # remove negative items below a threshold fkgl
+                neg_class = df[(df['fkgl'] >= 10.0) & (df['source'] == 0)].reset_index(drop=True)
 
                 for i, (text, fkgl_score, source) in pos_class.iterrows():
+                    
                     if len(self.splits['test']) < (max_test_val_lines // 2):
                         self.splits['test'].extend(split_and_label_for_fudge(text, source))
                     elif len(self.splits['val']) < (max_test_val_lines // 2):
@@ -227,15 +241,14 @@ class Dataset:
                     else:
                         break
                 
-                print('dataset balance:')
-                for split, items in self.splits.items():
-                    t_cnt = len(self.splits[split])
-                    s_cnt = sum(1 for i in self.splits[split] if i[1] == 1)
-                    print(f"complex / simple instances in {split} of size {t_cnt}: {t_cnt - s_cnt} / {s_cnt}")
-                
                 random.shuffle(self.splits['train'])
                 random.shuffle(self.splits['val'])
                 random.shuffle(self.splits['test'])
+
+                # pickle dataset for later
+                with open(outpath, 'wb') as pklf:
+                    pickle.dump(self.splits, pklf, pickle.HIGHEST_PROTOCOL)
+                print(f'saved data splits in {outpath}')
 
             #########
             # NEWSELA
@@ -294,6 +307,11 @@ class Dataset:
                 random.shuffle(self.splits['train'])
                 random.shuffle(self.splits['val'])
                 random.shuffle(self.splits['test'])
+
+                # pickle dataset for later
+                with open(outpath, 'wb') as pklf:
+                    pickle.dump(self.splits, pklf, pickle.HIGHEST_PROTOCOL)
+                print(f'saved data splits in {outpath}')
 
         ####################
 
@@ -389,18 +407,17 @@ class Dataset:
             self.word2rhyme_group, self.rhyme_group_counts, self.rhyme_groups, self.index2rhyme_group, self.rhyme_group2index, self.total_rhyme_groups = \
                     defaultdict(lambda: UNKNOWN_RHYME_GROUP, self.rhyme_info.word2rhyme_group), self.rhyme_info.rhyme_group_counts, self.rhyme_info.rhyme_groups, self.rhyme_info.index2rhyme_group, self.rhyme_info.rhyme_group2index, self.rhyme_info.total_rhyme_groups
 
-        print('done loading data')
-        print('split sizes:')
-        for key in ['train', 'val', 'test']:
-            print(key, len(self.splits[key]))
-        if not self.formality and not self.simplify:
-            print('total words', self.total_words)
-            print('vocab size', len(self.index2word))
-
-        # pickle dataset for later
-        with open(os.path.join(args.save_dir, 'dataset_splts.pkl'), 'wb') as pklf:
-            pickle.dump(self.splits, pklf, pickle.HIGHEST_PROTOCOL)
-        print(f'saved data splits in {args.save_dir}')
+        print('Done loading data!')
+        print('Dataset balance:')
+        for split, items in self.splits.items():
+            t_cnt = len(self.splits[split])
+            s_cnt = sum(1 for i in self.splits[split] if i[1] == 1)
+            print(f"complex / simple instances in {split} of size {t_cnt}: {t_cnt - s_cnt} / {s_cnt}")
+        # if not self.formality and not self.simplify:
+        #     print('total words', self.total_words)
+        #     print('vocab size', len(self.index2word))
+        
+        
 
     def shuffle(self, split, seed=None):
         assert split in ['train', 'val', 'test']

@@ -11,7 +11,7 @@ from constants import *
 from util import pad_mask
 
 class Model(nn.Module):
-    def __init__(self, args, gpt_pad_id, vocab_size, rhyme_group_size=None, glove_embeddings=None, verbose=True):
+    def __init__(self, args, gpt_pad_id, vocab_size, rhyme_group_size=None, glove_embeddings=None, verbose=False):
         super(Model, self).__init__()
         if verbose:
             print(f'PAD ID is set to {gpt_pad_id}')
@@ -50,14 +50,17 @@ class Model(nn.Module):
             if glove_embeddings is None:
                 if verbose:
                     print('initializing word embeddings from scratch')
-                    self.bart_embed = nn.Embedding(vocab_size, HIDDEN_DIM, padding_idx=gpt_pad_id) # gpt_pad_id = bart pad_token_id (in data.py)
+                self.bart_embed = nn.Embedding(vocab_size, EMBED_DIM, padding_idx=gpt_pad_id) # gpt_pad_id = bart pad_token_id (in data.py)
             else:
-                if verbose:
-                    print('initializing word embeddings from glove')
-                    if isinstance(glove_embeddings, str):
-                        glove_embeddings = np.load(glove_embeddings)
-                    self.bart_embed = nn.Embedding.from_pretrained(torch.from_numpy(glove_embeddings), padding_idx=1)
-            self.rnn = nn.LSTM(HIDDEN_DIM, HIDDEN_DIM, num_layers=3, bidirectional=False, dropout=0.5) # want it to be causal so we can learn all positions
+                # if verbose:
+                #     print('initializing word embeddings from glove')
+                if isinstance(glove_embeddings, str):
+                    glove_embeddings = np.load(glove_embeddings)
+                self.bart_embed = nn.Embedding.from_pretrained(torch.from_numpy(glove_embeddings), padding_idx=1)
+            # breakpoint()
+            # self.bart_embed
+            self.rnn = nn.LSTM(EMBED_DIM, HIDDEN_DIM, num_layers=3, bidirectional=False, dropout=0.1) # want it to be causal so we can learn all positions
+            
             self.out_linear = nn.Linear(HIDDEN_DIM, 1)
         ###################
         elif self.iambic:

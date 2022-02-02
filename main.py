@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 
 from data import Dataset
+# from data_v2 import SimplificationDataset as Dataset
 from model import Model
 from util import save_checkpoint, ProgressMeter, AverageMeter, num_params, pad_mask
 from constants import *
@@ -99,6 +100,7 @@ def validate(model, dataset, criterion, epoch, args, logger):
 
 def main(args):
     dataset = Dataset(args)
+    # breakpoint()
     os.makedirs(args.save_dir, exist_ok=True)
 
     with open(os.path.join(args.save_dir, 'dataset_info'), 'wb') as wf:
