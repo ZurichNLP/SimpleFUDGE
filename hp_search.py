@@ -45,10 +45,9 @@ logger = logging.getLogger()
 ###########
 # variables
 ###########
-max_lines = 50
-condition_lambda_sweep = [0, 1, 2, 3, 5, 8, 10] # [0, 1, 2, 3, 5, 6]
+condition_lambda_sweep = [0, 1, 2, 3, 6, 8, 10] # [0, 1, 2, 3, 5, 6]
 precondition_topk_sweep = [50, 100, 150, 200]
-soft_hard_sweep = [True, False]
+# soft_hard_sweep = [True, False]
 
 
 def chunker(iterable, batch_size=4):
@@ -83,9 +82,10 @@ if __name__ == '__main__':
     generator_model.eval()
 
     logger.info(f'Loading conditioning model')
-    checkpoint = torch.load(args.condition_model, map_location=args.device)
+    condition_model_ckpt = Path(args.condition_model) / 'model_best.pth.tar'
+    checkpoint = torch.load(condition_model_ckpt, map_location=args.device)
     model_args = checkpoint['args']
-    breakpoint()
+    # breakpoint()
     conditioning_model = Model(model_args, tokenizer.pad_token_id, tokenizer.vocab_size)
     conditioning_model.load_state_dict(checkpoint['state_dict'])
     conditioning_model = conditioning_model.to(args.device)
@@ -93,8 +93,6 @@ if __name__ == '__main__':
 
     results = []
     
-
-
     vargs = vars(args)
     for dataset in args.datasets:
         infile = Path(args.data_dir) / f'{dataset}.tsv'
@@ -106,39 +104,39 @@ if __name__ == '__main__':
                 for precondition_topk in precondition_topk_sweep:
                     vargs['precondition_topk'] = precondition_topk
                     logger.info(f'precondition_topk = {precondition_topk}...')
-                    for val in soft_hard_sweep:
-                        vargs['soft'] = val
-                        logger.info(f'soft = {val}...')
+                    # for val in soft_hard_sweep:
+                    #     vargs['soft'] = val
+                    #     logger.info(f'soft = {val}...')
 
-                        hyp_sents = []
-                        sents = read_split_lines(infile, '\t')[:args.max_lines] # threshold lines used for validation
-                        src_sents = [i[0] for i in sents]
-                        refs_sents = [i[1:] for i in sents]
-                        refs_sents = list(map(list, [*zip(*refs_sents)])) # transpose to number samples x len(test set)
-                        for batch in tqdm(chunker(src_sents, args.batch_size), total=len(src_sents)//args.batch_size):
-                            outputs = predict_simplicity(generator_model, tokenizer, conditioning_model, batch, SimpleNamespace(**vargs))
-                            hyp_sents.extend(outputs)
+                    hyp_sents = []
+                    sents = read_split_lines(infile, '\t')[:args.max_lines] # threshold lines used for validation
+                    src_sents = [i[0] for i in sents]
+                    refs_sents = [i[1:] for i in sents]
+                    refs_sents = list(map(list, [*zip(*refs_sents)])) # transpose to number samples x len(test set)
+                    for batch in tqdm(chunker(src_sents, args.batch_size), total=len(src_sents)//args.batch_size):
+                        outputs = predict_simplicity(generator_model, tokenizer, conditioning_model, batch, SimpleNamespace(**vargs))
+                        hyp_sents.extend(outputs)
 
-                        lresults = {}
-                        lresults.update(vargs)
-                        lresults['data'] = dataset
-                        lresults['bleu'] = bleu.corpus_bleu(hyp_sents, refs_sents)
-                        lresults['sari'] = sari.corpus_sari(src_sents, hyp_sents, refs_sents, legacy=False)
-                        lresults['fkgl'] = fkgl.corpus_fkgl(hyp_sents)
-                        # NOTE: when computing ppl with gpt-2, we prefix each sentence with a
-                        # full-stop so that the entire generated sentence is scored correctly!
-                        lresults['ppl'] = np.nanmean(np.array([distilGPT2_perplexity_score('. ' + sent) for sent in hyp_sents]))
-                        lresults['wlen'] = sum([len(sent.strip().split()) for sent in hyp_sents]) / len(hyp_sents)
-                        lresults['empty'] = sum([1 for sent in hyp_sents if len(sent.strip()) == 0])
-                        results.append(lresults)
-                        logger.info(f'*********')
-                        logger.info(f'{lresults}')
-                        logger.info(f'*********')
+                    lresults = {}
+                    lresults.update(vargs)
+                    lresults['data'] = dataset
+                    lresults['bleu'] = bleu.corpus_bleu(hyp_sents, refs_sents)
+                    lresults['sari'] = sari.corpus_sari(src_sents, hyp_sents, refs_sents, legacy=False)
+                    lresults['fkgl'] = fkgl.corpus_fkgl(hyp_sents)
+                    # NOTE: when computing ppl with gpt-2, we prefix each sentence with a
+                    # full-stop so that the entire generated sentence is scored correctly!
+                    lresults['ppl'] = np.nanmean(np.array([distilGPT2_perplexity_score('. ' + sent) for sent in hyp_sents]))
+                    lresults['wlen'] = sum([len(sent.strip().split()) for sent in hyp_sents]) / len(hyp_sents)
+                    lresults['empty'] = sum([1 for sent in hyp_sents if len(sent.strip()) == 0])
+                    results.append(lresults)
+                    logger.info(f'*********')
+                    logger.info(f'{lresults}')
+                    logger.info(f'*********')
 
-                        generated_output_file = Path(args.outpath) / f'{dataset}_{condition_lambda}_{precondition_topk}_{val}.txt'
-                        with open(generated_output_file, 'r', encoding='utf8') as outf:
-                            for sent in hyp_sents:
-                                outf.write(f'{sent}\n')
+                    generated_output_file = Path(args.outpath) / f'{dataset}_{condition_lambda}_{precondition_topk}.txt'
+                    with open(generated_output_file, 'w', encoding='utf8') as outf:
+                        for sent in hyp_sents:
+                            outf.write(f'{sent}\n')
 
 
     logger.info(f'*********')

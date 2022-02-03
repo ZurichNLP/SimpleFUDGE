@@ -216,6 +216,7 @@ if __name__=='__main__':
     parser.add_argument('--num_workers', type=int, default=20, help='num workers for data loader')
     parser.add_argument('--evaluate', action='store_true', default=False)
     parser.add_argument('--debug', action='store_true', default=False)
+    parser.add_argument('--bidirectional', type=bool, default=False, help='whether or not LSTM conditioning odel is bidirectional or causal')
 
     # PRINTING
     parser.add_argument('--train_print_freq', type=int, default=1000000, help='how often to print metrics (every X batches)')

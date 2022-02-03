@@ -96,7 +96,8 @@ def main(args):
     generator_model.eval()
 
     # load fudge conditioning model
-    checkpoint = torch.load(args.condition_model, map_location=args.device)
+    condition_model_ckpt = Path(args.condition_model) / 'model_best.pth.tar'
+    checkpoint = torch.load(condition_model_ckpt, map_location=args.device)
     model_args = checkpoint['args']
     conditioning_model = Model(model_args, tokenizer.pad_token_id, tokenizer.vocab_size)
     conditioning_model.load_state_dict(checkpoint['state_dict'])
@@ -105,7 +106,7 @@ def main(args):
 
     if args.verbose:
         print("=> loaded checkpoint '{}' (epoch {})"
-                .format(args.condition_model, checkpoint['epoch']))
+                .format(condition_model_ckpt, checkpoint['epoch']))
         print('num params', num_params(conditioning_model))
 
     outfile = infer_outfile_name_from_args(args)

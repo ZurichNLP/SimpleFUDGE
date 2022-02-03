@@ -59,7 +59,10 @@ class Model(nn.Module):
                 self.bart_embed = nn.Embedding.from_pretrained(torch.from_numpy(glove_embeddings), padding_idx=1)
             # breakpoint()
             # self.bart_embed
-            self.rnn = nn.LSTM(EMBED_DIM, HIDDEN_DIM, num_layers=3, bidirectional=False, dropout=0.1) # want it to be causal so we can learn all positions
+            if 'bidirectional' in args and args.bidirectional:
+                self.rnn = nn.LSTM(EMBED_DIM, HIDDEN_DIM//2, num_layers=3, bidirectional=True, dropout=0.1)
+            else:
+                self.rnn = nn.LSTM(EMBED_DIM, HIDDEN_DIM, num_layers=3, bidirectional=False, dropout=0.1) # want it to be causal so we can learn all positions
             
             self.out_linear = nn.Linear(HIDDEN_DIM, 1)
         ###################

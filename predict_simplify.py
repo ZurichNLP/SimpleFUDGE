@@ -3,6 +3,7 @@ import random
 import time
 import pickle
 import math
+from pathlib import Path
 import pprint
 from argparse import ArgumentParser
 
@@ -55,7 +56,7 @@ def generation_arg_parser(description=None):
     parser.add_argument('--length_penalty', type=float, default=1.0, help='Exponential penalty to the length. 1.0 means no penalty. Set to values < 1.0 in order to encourage the model to generate shorter sequences, to a value > 1.0 in order to encourage the model to produce longer sequences.')
     parser.add_argument('--num_beam_groups', type=int, default=1, help='Number of groups to divide `num_beams` into in order to ensure diversity among different groups of beams. See [this paper](https://arxiv.org/pdf/1610.02424.pdf) for more details. NOTE: not working with FUDGE')
     parser.add_argument('--temperature', type=float, default=1.0, help='temperature used to modify logits for generation.')
-    parser.add_argument('--min_length', type=int, default=1, help='minimum length of target sequence, used to instantiate a MinLengthLogitProcessor')
+    parser.add_argument('--min_length', type=int, default=10, help='minimum length of target sequence, used to instantiate a MinLengthLogitProcessor')
     
     ############################
     # stochastic decoing params: 
@@ -184,7 +185,8 @@ def main(args):
     model = BartForConditionalGeneration.from_pretrained(args.generation_model, return_dict=True).to(args.device)
     model.eval()
 
-    checkpoint = torch.load(args.condition_model, map_location=args.device)
+    condition_model_ckpt = Path(args.condition_model) / 'model_best.pth.tar'
+    checkpoint = torch.load(condition_model_ckpt, map_location=args.device)
     model_args = checkpoint['args']
     conditioning_model = Model(model_args, tokenizer.pad_token_id, tokenizer.vocab_size) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
     conditioning_model.load_state_dict(checkpoint['state_dict']) # NOTE when loading state_dict for Model, size mismatch for marian_embed.weight: copying a param with shape torch.Size([65002, 300]) from checkpoint, the shape in current model is torch.Size([50266, 300])
@@ -193,7 +195,7 @@ def main(args):
     
     if args.verbose:
         print("=> loaded checkpoint '{}' (epoch {})"
-            .format(args.condition_model, checkpoint['epoch']))
+            .format(condition_model_ckpt, checkpoint['epoch']))
         print('num params', num_params(conditioning_model))
 
 
