@@ -19,46 +19,6 @@ beam search, top-k/nucleus sampling.
 - [Original code](https://github.com/yangkevin2/naacl-2021-fudge-controlled-generation)
 - [Custom logits processors](https://towardsdatascience.com/the-power-of-constrained-language-models-cf63b65a035d)
 
-## Sanity check
-
-Output of new implementation matches the original when using
-greedy decoding.
-
-```
-python predict_simplify_as_logits_processor.py --ckpt /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar --dataset_info /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/dataset_info --precondition_topk 200 --condition_lambda 80 --vectorized --num_beams 1 --num_return_sequences 1 --input_text "This is a test sentence"
-['They are saying.This is a test.']
-
-python predict_simplify.py --ckpt /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar --dataset_info /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/dataset_info --precondition_topk 200 --condition_lambda 80 --input_text "This is a test sentence"
-['They are saying.This is a test.</s>']
-```
-
-Usage Examples
-
-```
-python predict_simplify.py \
-    --condition_model /srv/scratch6/kew/ats/fudge/discriminators/newsela4_bart_glove/model_best.pth.tar \
-    --generation_model /srv/scratch6/kew/ats/fudge/generators/bart_large_paraNMT_filt_fr \
-    --precondition_topk 200 \
-    --condition_lambda 10 \
-    --vectorized \
-    --num_beams 4 \
-    --num_return_sequences 4 \
-    --soft
-
-python predict_simplify.py \
-    --condition_model /srv/scratch6/kew/ats/fudge/discriminators/wiki100M_bart_glove/model_best.pth.tar \
-    --generation_model /srv/scratch6/kew/ats/fudge/generators/bart_large_paraNMT_filt_fr \
-    --precondition_topk 200 \
-    --condition_lambda 10 \
-    --vectorized \
-    --num_beams 4 \
-    --num_return_sequences 4 \
-    --soft
-
-
-
-```
-
 ## Setup
 
 ```
@@ -70,6 +30,74 @@ cd easse
 pip install -e .
 ```
 
+## Usage Examples
+
+```
+GENERATION_MODEL=/srv/scratch6/kew/ats/fudge/generators/bart_large_paraNMT_filt_fr 
+CONDITION_MODEL=/srv/scratch6/kew/ats/fudge/discriminators/wiki100M_bart_glove/model_best.pth.tar
+# OR
+# CONDITION_MODEL=/srv/scratch6/kew/ats/fudge/discriminators/newsela4_bart_glove/model_best.pth.tar
+
+python predict_simplify.py \
+    --condition_model $CONDITION_MODEL \
+    --generation_model $GENERATION_MODEL \
+    --precondition_topk 200 \
+    --condition_lambda 10 \
+    --vectorized \
+    --num_beams 4 \
+    --num_return_sequences 4 \
+    --soft
+
+```
+
+## HP Search
+
+FUDGE has one main hyperparameter (lambda, default=1). Selecting the
+correct value for lamba may depend on the quality of the
+paraphraser, discriminator and the corpus. 
+
+See the script `hp_search.py` for a hyperparameter sweep and
+the analysis in the notebook.
+
+## Sanity check
+
+Output of new implementation matches the original when using
+greedy decoding:
+
+```
+# note, these commands below are now deprecated
+python predict_simplify_as_logits_processor.py --ckpt /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar --dataset_info /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/dataset_info --precondition_topk 200 --condition_lambda 80 --vectorized --num_beams 1 --num_return_sequences 1 --input_text "This is a test sentence"
+['They are saying.This is a test.']
+
+python predict_simplify.py --ckpt /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar --dataset_info /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/dataset_info --precondition_topk 200 --condition_lambda 80 --input_text "This is a test sentence"
+['They are saying.This is a test.</s>']
+```
+
+## Comparisons with other Simplification Methods
+
+if [MUSS](https://github.com/facebookresearch/muss) is installed and running in a separate conda
+environment, use `simplify_with_muss.sh` to generate
+simplifications for a given input file, e.g.
+
+```
+bash simplify_with_muss.sh /srv/scratch6/kew/ats/data/en/aligned/turk_test.tsv /srv/scratch6/kew/ats/muss/outputs/turk_test_HEAD.txt 5
+```
+
+## Experiments
+
+- [ ] improved classifier
+    - [x] initialised from pre-trained glove embeddings
+    - [x] increasing model size
+    - [x] bidirectional 
+    - [ ] using pretrained model, e.g. BERT / BART
+- [ ] improving paraphraser
+    - [ ] training on mined paraphrase sentences à la [MUSS](https://github.com/facebookresearch/muss)
+
+## TODOs
+
+- [ ] experiment with improved classifier (e.g.
+  BERT/BART-base) 
+- [ ]
 
 <!-- ## TODOs
 - [ ] fix model string inherited from dataset for BART model
