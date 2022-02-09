@@ -30,6 +30,10 @@ cd easse
 pip install -e .
 ```
 
+## Data 
+
+For information on the simplification data used, see the relevant README in [`ats_data`](https://github.com/tannonk/fudge/blob/master/ats_data/README.md)
+
 ## Usage Examples
 
 ```
@@ -81,6 +85,18 @@ simplifications for a given input file, e.g.
 
 ```
 bash simplify_with_muss.sh /srv/scratch6/kew/ats/data/en/aligned/turk_test.tsv /srv/scratch6/kew/ats/muss/outputs/turk_test_HEAD.txt 5
+```
+
+## Evaluating Outputs
+
+For evaluating generated simplifications, we use [EASSE](https://github.com/feralvam/easse)
+
+The relevant metrics are within `simplification_evaluation.py`, e.g.
+
+```
+python simplification_evaluation.py \
+    --src_file /srv/scratch6/kew/ats/data/en/aligned/turk_test.tsv \
+    --hyp_file /srv/scratch6/kew/ats/fudge/results/bart_large_paraNMT_filt_fr/turk_test/lambda0.0_pretopk200_beams4_estopFalse_maxl128_minl1_sampleFalse_lp1.0_norep1_bgrps1_nbest1_repp1.0_softFalse_temp1.0_topk0_topp1.0.txt
 ```
 
 ## Experiments
