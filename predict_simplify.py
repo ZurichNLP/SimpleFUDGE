@@ -29,9 +29,11 @@ from transformers import (
     TemperatureLogitsWarper,
     TopPLogitsWarper,
     MinLengthLogitsProcessor,
+    RepetitionPenaltyLogitsProcessor
 )
 
 from fudge import FUDGELogits
+from typical import TypicalLogitsWarper
 
 def generation_arg_parser(description=None):
     parser = ArgumentParser(description)
@@ -63,6 +65,7 @@ def generation_arg_parser(description=None):
     parser.add_argument('--do_sample', type=bool, default=False, help='sample instead of greedy')
     parser.add_argument('--top_k', type=int, default=0, help='')
     parser.add_argument('--top_p', type=float, default=1.0, help='')
+    parser.add_argument('--typical_p', type=float, default=None, help='')
     parser.add_argument('--max_length', type=int, default=128, help='max generated sequence length')
     parser.add_argument('--repetition_penalty', type=float, default=1.0, help='')
     parser.add_argument('--no_repeat_ngram_size', type=int, default=1, help='')
@@ -73,6 +76,7 @@ def generation_arg_parser(description=None):
     parser.add_argument('--condition_lambda', type=float, default=1.0, help='lambda weight on conditioning model. Note: if set to 0, FUDGE is not applied!')
     parser.add_argument('--vectorized', type=bool, default=True, help='whether or not to use the vectorized implementation of FUDGE logits_processor')
     parser.add_argument('--soft', type=bool, default=False, help="type of fudge: if provided, all logits not in FUDGE's topk preselection are set to -inf and will not be generated. Default: False, i.e. these logits are left untouched and could still be generated.")
+    parser.add_argument('--analysis_file', type=str, default=None, help="File path, if given logits and pre-/post-fudge logits are written to file for analysis")
     
     return parser
 
@@ -98,30 +102,49 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
         
         if args.min_length:
             # min length logits processor needs to be before FUDGE
-            min_length_proc = MinLengthLogitsProcessor(args.min_length, eos_token_id=model.config.eos_token_id)
-            logits_processor.append(min_length_proc)
+            logits_processor.insert(0, MinLengthLogitsProcessor(args.min_length, eos_token_id=model.config.eos_token_id))
+            
+        if args.repetition_penalty != 1.0:
+            logits_processor.insert(0, RepetitionPenaltyLogitsProcessor(args.repetition_penalty))
 
         if args.condition_lambda:
             # instantiate FUDGE logits processor
             fudge_proc = FUDGELogits(
-                tokenizer, 
-                conditioning_model, 
-                args.condition_lambda, 
-                args.precondition_topk, 
-                batch_size,
-                args.soft,
-                args.vectorized
+                tokenizer=tokenizer, 
+                conditioning_model=conditioning_model, 
+                condition_lambda=args.condition_lambda, 
+                precondition_topk=args.precondition_topk, 
+                batch_size=batch_size,
+                soft=args.soft,
+                vectorized=args.vectorized,
+                analysis_file=args.analysis_file,
                 )
-            logits_processor.append(fudge_proc)
+            logits_processor.insert(0, fudge_proc)
+        
+        if args.verbose:
+            print('Logits Processor List:', logits_processor)
 
         stopping_criterion = StoppingCriteriaList([MaxLengthCriteria(max_length=args.max_length)])
         
-        # instantiate logits warpers as processors,
-        # default to temperature==1.0, i.e. no effect        
-        logits_warper = LogitsProcessorList([TemperatureLogitsWarper(args.temperature)])
+        if args.do_sample: 
+            # instantiate logits warpers for multinomial sampling techniques
+            # default to temperature==1.0, i.e. no effect        
+            logits_warper = LogitsProcessorList([TemperatureLogitsWarper(args.temperature)])
+
+            if args.top_k is not None and args.top_k > 0: # stochastic decoding with beam
+                logits_warper.insert(0, TopKLogitsWarper(args.top_k, min_tokens_to_keep=args.num_beams))
+            if args.top_p is not None and args.top_p < 1.0:
+                logits_warper.insert(0, TopPLogitsWarper(args.top_p, min_tokens_to_keep=args.num_beams))
+            if args.typical_p is not None:
+                logits_warper.insert(0, TypicalLogitsWarper(args.typical_p, min_tokens_to_keep=args.num_beams))
+                # print(logits_warper)
+
+            if args.verbose:
+                print('Logits Warper List:', logits_warper)
 
         if args.num_beams > 1: # beam decoding
             
+            # breakpoint()
             # instantiate a BeamSearchScorer
             beam_scorer = BeamSearchScorer(
                 batch_size=batch_size,
@@ -132,14 +155,8 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
                 num_beam_groups=args.num_beam_groups,
                 device=args.device,
                 )
-
-            if args.do_sample: # stochastic decoding with beam
-                
-                if args.top_k > 0:
-                    logits_warper.insert(0, TopKLogitsWarper(args.top_k))
-                if args.top_p < 1.0:
-                    logits_warper.insert(0, TopPLogitsWarper(args.top_p))
-                
+            
+            if args.do_sample: # stochastic decoding with beam - uses beam_sample()
                 outputs = model.beam_sample(
                     decoder_input_ids,
                     beam_scorer,
@@ -149,32 +166,33 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
                     **model_kwargs
                     )
 
-            else: # regular (greedy) beam search with FUDGE
+            else: # regular (greedy) beam search with FUDGE - uses beam_search()
                 outputs = model.beam_search(
                     decoder_input_ids,
                     beam_scorer,
                     logits_processor=logits_processor,
-                    logits_warper=logits_warper,
                     stopping_criteria=stopping_criterion,
                     **model_kwargs
                     )
         
         else: 
             
-            if not args.do_sample: # geedy decoding with FUDGE 
-                # NOTE: should be the same as original implementation
-
-                outputs = model.greedy_search(
+            if args.do_sample: # simple sampling - no beam!
+                outputs = model.sample(
                     decoder_input_ids, 
                     logits_processor=logits_processor,
                     logits_warper=logits_warper,
                     **model_kwargs
                     )
+
+            else: # regular geedy decoding with FUDGE 
+                # NOTE: should be the same as original implementation
+                outputs = model.greedy_search(
+                    decoder_input_ids, 
+                    logits_processor=logits_processor,
+                    **model_kwargs
+                    )
             
-            else:
-                raise NotImplementedError('sampling with beam size == 1 not yet implemented!')
-
-
         return tokenizer.batch_decode(outputs, skip_special_tokens=True, clean_up_tokenization_spaces=True)
 
 def main(args):
@@ -198,6 +216,11 @@ def main(args):
             .format(condition_model_ckpt, checkpoint['epoch']))
         print('num params', num_params(conditioning_model))
 
+    if args.analysis_file is not None:
+        Path(args.analysis_file).parent.mkdir(parents=True, exist_ok=True) # ensure directory exists, no harm if it does
+        if Path(args.analysis_file).exists() and Path(args.analysis_file).is_file():
+            Path(args.analysis_file).unlink() # remove an existing analysis file - necessary as it gets opened in append mode 
+        
 
     if args.debug: # dummy input for testing
         input_text = [
@@ -206,6 +229,10 @@ def main(args):
             ]
     elif not args.input_text: # example of batched input for simplification
         input_text = [
+            "This is extremely hard to comprehend.",
+            "The mouse was eaten by the cat.",
+            "Saint Petersburg, formerly known as Petrograd and later Leningrad, is the second-largest city in Russia.",
+            "Effective altruism advocates using evidence to determine the most effective ways to benefit others.",
             "Memorial West's class is one of several programs offered through hospitals to help children stay healthy through exercise and proper eating",
             "The idea is to encourage healthy eating and exercise as early as possible to prevent health problems later on."
             ]

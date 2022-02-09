@@ -18,6 +18,7 @@ demo() {
         --generation_model $SCRATCH/fudge/generators/bart_large_paraNMT_filt_fr \
         --condition_lambda 1 \
         --num_beams 5 --num_return_sequences 5 \
+        --do_sample True --typical_p 0.5
         
 }
 
@@ -68,6 +69,36 @@ train_simple_newsela_discriminator_glove_bidirectional() {
         --data_dir $data_dir \
         --save_dir $save_dir \
         --tgt_level 4 \
+        --model_path_or_name $model_dir \
+        --num_workers 12 \
+        --lr 1e-4 \
+        --batch_size 32 \
+        --epochs 10 \
+        --glove 'glove-wiki-gigaword-300' \
+        --wandb simple_fudge \
+        --bidirectional True
+    
+    echo "Finished training discrimator"
+}
+
+train_simple_newsela2_discriminator_glove_bidirectional() {
+
+    GPU=$1
+    export CUDA_VISIBLE_DEVICES=$GPU
+
+    data_dir=$SCRATCH/data/en/newsela_article_corpus_2016-01-29/article_sents
+    save_dir=$SCRATCH/fudge/discriminators/newsela2_bart_glove_bi
+    model_dir=$SCRATCH/fudge/generators/bart_large_paraNMT_filt_fr
+
+    mkdir -p $save_dir
+
+    echo "Running on GPU(s) $GPU"
+
+    python main.py \
+        --task simplify \
+        --data_dir $data_dir \
+        --save_dir $save_dir \
+        --tgt_level 2 \
         --model_path_or_name $model_dir \
         --num_workers 12 \
         --lr 1e-4 \

@@ -5,9 +5,10 @@ import torch
 from torch import Tensor
 from transformers import LogitsProcessor
 from typing import List, Optional
+import json
 
 class FUDGELogits(LogitsProcessor):
-    def __init__(self, tokenizer, conditioning_model, condition_lambda, precondition_topk, batch_size, soft, vectorized=True):
+    def __init__(self, tokenizer, conditioning_model, condition_lambda, precondition_topk, batch_size, soft, vectorized=True, analysis_file=None):
         """
         vocab is a dictionary where the keys are tokens
         and the values are the corresponding ids.
@@ -20,6 +21,7 @@ class FUDGELogits(LogitsProcessor):
         self.batch_size = batch_size # only used in vectorized implementation
         self.soft = soft
         self.vectorized = vectorized
+        self.analysis_file = analysis_file
 
     def __call__(self, input_ids, scores):
 
@@ -133,6 +135,18 @@ class FUDGELogits(LogitsProcessor):
             new_scores = scores.clone() # default value for logits = original scores
         # replace original logits with computed fudge
         new_scores.scatter_(1, top_indices, fudge_logits)
+
+        # write logits to file for analysing impact of fudge
+        if self.analysis_file is not None:
+            with open(self.analysis_file, 'a+', encoding='utf8') as outf:
+                d = {
+                    'time_step': input_ids.shape[-1],
+                    'top_tokens': [self.tokenizer.batch_decode(top_indices[i]) for i in range(len(top_indices))],
+                    'pre_scores': top_logits.tolist(),
+                    'post_scores': fudge_logits.tolist(),
+                }
+                d = json.dumps(d)
+                outf.write(f'{d}\n')
 
         return new_scores
 
