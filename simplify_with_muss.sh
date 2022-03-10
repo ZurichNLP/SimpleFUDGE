@@ -27,7 +27,7 @@ tmpfile=$(mktemp /tmp/muss_src_file.XXXXXX)
 echo "Translating $tmpfile ..."
 
 # trim first column from file
-cut -f 1 /srv/scratch6/kew/ats/data/en/aligned/turk_test.tsv >| $tmpfile
+cut -f 1 $SRC_FILE >| $tmpfile
 
 python $MUSS_DIR/scripts/simplify.py $tmpfile --model-name muss_en_mined --outfile $OUT_FILE
 
@@ -35,5 +35,5 @@ python $MUSS_DIR/scripts/simplify.py $tmpfile --model-name muss_en_mined --outfi
 rm $tmpfile
 
 conda deactivate
-echo "Finished implifying with MUSS $SRC_FILE"
+echo "Finished simplifying with MUSS $SRC_FILE"
 echo "Simplifications: $OUT_FILE"

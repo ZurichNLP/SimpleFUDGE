@@ -10,16 +10,16 @@ Considers options for the following params:
 
 - precondition_topk 200
 - condition_lambda 10
-- soft vs. hard
+# - soft vs. hard
 
 Example Call:
     
     python hp_search.py \
         --condition_model /srv/scratch6/kew/ats/fudge/discriminators/wiki100M_bart_glove/model_best.pth.tar \
         --generation_model /srv/scratch6/kew/ats/fudge/generators/bart_large_paraNMT_filt_fr \
+        --outpath hp_search_results \
         --do_sample --top_k=5 \
-        --logging_file hp_search_results/topk5_sweep.csv \
-        --outpath hp_search_results/topk5_sweep.log \
+        --log_to_file \
         --max_lines 50
 """
 
@@ -45,21 +45,21 @@ logger = logging.getLogger()
 ###########
 # variables
 ###########
-condition_lambda_sweep = [0, 1, 2, 3, 6, 8, 10] # [0, 1, 2, 3, 5, 6]
+condition_lambda_sweep = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # [0, 1, 2, 3, 5, 6]
 precondition_topk_sweep = [50, 100, 150, 200]
 # soft_hard_sweep = [True, False]
 
 
-def chunker(iterable, batch_size=4):
+def chunker(iterable, batch_size=1):
     return (iterable[pos:pos + batch_size] for pos in range(0, len(iterable), batch_size))
 
 if __name__ == '__main__':
 
     parser = generation_arg_parser(description="SimpleFUDGE")
     
-    parser.add_argument('--logging_file', type=str, default=None, required=False, help='file for logging, if not provided, logs are printed to stdout')
+    parser.add_argument('--log_to_file', action='store_true', required=False, help='whether or not to send logs to file `outpath/hp_search.log`. If not, logs are printed to stdout')
     parser.add_argument('--outpath', type=str, default=None, required=True, help='output file for results csv')
-    parser.add_argument('--batch_size', type=int, default=4, required=False, help='number of lines to process as a batch for prediction')
+    parser.add_argument('--batch_size', type=int, default=1, required=False, help='number of lines to process as a batch for prediction')
     parser.add_argument('--max_lines', type=int, default=10, required=False, help='number of lines from validation file to process for generation')
 
     parser.add_argument('--data_dir', type=str, default='/srv/scratch6/kew/ats/data/en/aligned', required=False, help='directory containing aligned test/validation files')
@@ -68,11 +68,13 @@ if __name__ == '__main__':
         default=['asset_validation','turk_validation','newsela_manual_v0_v4_dev', 'wiki_manual_dev'], 
         required=False, nargs='*', help='names of test/validation files to run inference on')
 
-
     args = parser.parse_args()
 
-    if args.logging_file is not None:
-        logging.basicConfig(filename=args.logging_file , format='%(asctime)s | %(levelname)s: %(message)s', level=logging.NOTSET)
+    Path(args.outpath).mkdir(parents=True, exist_ok=True)
+
+    if args.log_to_file:
+        logging_file = Path(args.outpath) / 'hp_search.log'
+        logging.basicConfig(filename=logging_file , format='%(asctime)s | %(levelname)s: %(message)s', level=logging.NOTSET)
     else:
         logging.basicConfig(format='%(asctime)s | %(levelname)s: %(message)s', level=logging.NOTSET)
 
@@ -113,7 +115,8 @@ if __name__ == '__main__':
                     src_sents = [i[0] for i in sents]
                     refs_sents = [i[1:] for i in sents]
                     refs_sents = list(map(list, [*zip(*refs_sents)])) # transpose to number samples x len(test set)
-                    for batch in tqdm(chunker(src_sents, args.batch_size), total=len(src_sents)//args.batch_size):
+                    # for batch in tqdm(chunker(src_sents, args.batch_size), total=len(src_sents)//args.batch_size):
+                    for batch in chunker(src_sents, args.batch_size):
                         outputs = predict_simplicity(generator_model, tokenizer, conditioning_model, batch, SimpleNamespace(**vargs))
                         hyp_sents.extend(outputs)
 

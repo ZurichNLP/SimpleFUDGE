@@ -16,7 +16,8 @@ from itertools import islice
 import spacy
     
 # setup spacy sentencizer
-nlp = spacy.load("en_core_web_sm", disable=["tagger", "ner", "lemmatizer"]) # just the parser
+# nlp = spacy.load("en_core_web_sm", disable=["tagger", "ner", "lemmatizer"]) # just the parser
+nlp = spacy.load("de_core_news_sm", disable=["tagger", "ner", "lemmatizer"]) # just the parser
 nlp.add_pipe('sentencizer')
 
 def split_sentences_for_batched_lines(file, n=256, min_length=5):

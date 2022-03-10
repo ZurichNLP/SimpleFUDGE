@@ -12,13 +12,20 @@ demo() {
 
     GPU=$1
     export CUDA_VISIBLE_DEVICES=$GPU
-    
+    cond_model=newsela4_bart_glove_bi
+    # cond_model=newsela4_bart_glove
+    # cond_model=wiki100M_bart_glove
+    gen_model=bart_large_paraNMT_filt_fr
+    lambda=5
+
     python predict_simplify.py \
-        --condition_model $SCRATCH/fudge/discriminators/newsela4_bart_glove \
-        --generation_model $SCRATCH/fudge/generators/bart_large_paraNMT_filt_fr \
-        --condition_lambda 1 \
-        --num_beams 5 --num_return_sequences 5 \
-        --do_sample True --typical_p 0.5
+        --condition_model $SCRATCH/fudge/discriminators/$cond_model \
+        --generation_model $SCRATCH/fudge/generators/$gen_model \
+        --condition_lambda $lambda \
+        --num_beams 1 --num_return_sequences 1 \
+        --analysis_file /srv/scratch6/kew/ats/fudge/analysis/newsela4_bart_glove-lambda$lambda.json \
+        --input_text "Memorial West's class is one of several programs offered through hospitals to help children stay healthy through exercise and proper eating"
+        # --do_sample True --typical_p 0.5
         
 }
 
@@ -169,9 +176,14 @@ hp_search_beam() {
     GPU=$1
     export CUDA_VISIBLE_DEVICES=$GPU
 
-    cond_model=wiki100M_bart_glove
-    gen_model=bart_large_paraNMT_filt_fr
-    outdir=$SCRATCH/fudge/hpsearch/$gen_model-$cond_model/beam
+    max_lines=$2
+    # cond_model=wiki100M_bart_glove
+    cond_model=$3 # newsela4_bart_glove_bi
+    # cond_model=newsela4_bart_glove
+    # cond_model=wiki100M_bart_glove
+    gen_model=$4 # bart_large_paraNMT_filt_fr
+    # gen_model=bart_large_paraNMT_filt_fr
+    outdir=$SCRATCH/fudge/hpsearch/$gen_model/$cond_model/beam
 
     mkdir -p $outdir
 
@@ -183,7 +195,8 @@ hp_search_beam() {
         --outpath $outdir \
         --data_dir $SCRATCH/data/en/aligned \
         --datasets asset_validation turk_validation newsela_manual_v0_v4_dev wiki_manual_dev \
-        --max_lines 50
+        --max_lines $max_lines --batch_size 1 \
+        --log_to_file
 
     echo "Finished HP sweep. See results in $outdir"
 }
@@ -195,7 +208,7 @@ hp_search_topk() {
 
     cond_model=wiki100M_bart_glove
     gen_model=bart_large_paraNMT_filt_fr
-    outdir=$SCRATCH/fudge/hpsearch/$gen_model-$cond_model/topk5
+    outdir=$SCRATCH/fudge/hpsearch/$gen_model/$cond_model/topk5
 
     mkdir -p $outdir
 
@@ -208,9 +221,39 @@ hp_search_topk() {
         --outpath $outdir \
         --data_dir $SCRATCH/data/en/aligned \
         --datasets asset_validation turk_validation newsela_manual_v0_v4_dev wiki_manual_dev \
-        --max_lines 50
+        --max_lines 50 \
+        --log_to_file
 
     echo "Finished HP sweep. See results in $outdir"
 }
+
+
+decode_data() {
+
+    GPU=$1
+    export CUDA_VISIBLE_DEVICES=$GPU
+    
+    condition_lambda=$2
+    cond_model=$3 # newsela4_bart_glove_bi
+    # cond_model=newsela4_bart_glove
+    # cond_model=wiki100M_bart_glove
+    gen_model=$4 # bart_large_paraNMT_filt_fr
+    data_dir=$SCRATCH/data/en/aligned
+    outpath=$SCRATCH/fudge/results
+
+    # for file in asset_test.tsv newsela_manual_v0_v4_test.tsv wiki_manual_test.tsv
+    for file in newsela_manual_v0_v4_dev.tsv wiki_manual_dev.tsv asset_validation.tsv
+    do 
+        python inference.py \
+            --infile $data_dir/$file --outpath $outpath \
+            --condition_model $SCRATCH/fudge/discriminators/$cond_model \
+            --generation_model $SCRATCH/fudge/generators/$gen_model \
+            --condition_lambda $condition_lambda \
+            --precondition_topk 100 \
+            --batch_size 1 \
+            --num_beams 5 --num_return_sequences 5
+    done
+}
+
 
 "$@"

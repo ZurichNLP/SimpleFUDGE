@@ -75,7 +75,7 @@ def generation_arg_parser(description=None):
     parser.add_argument('--precondition_topk', type=int, default=200, help='consider top k outputs from gpt at each step before conditioning and re-pruning')
     parser.add_argument('--condition_lambda', type=float, default=1.0, help='lambda weight on conditioning model. Note: if set to 0, FUDGE is not applied!')
     parser.add_argument('--vectorized', type=bool, default=True, help='whether or not to use the vectorized implementation of FUDGE logits_processor')
-    parser.add_argument('--soft', type=bool, default=False, help="type of fudge: if provided, all logits not in FUDGE's topk preselection are set to -inf and will not be generated. Default: False, i.e. these logits are left untouched and could still be generated.")
+    parser.add_argument('--soft', type=bool, default=False, help="type of fudge: if True, all logits not in FUDGE's topk preselection are set to -inf and cannot be generated. Default: False, i.e. these logits are left untouched and could potential still be sampled.")
     parser.add_argument('--analysis_file', type=str, default=None, help="File path, if given logits and pre-/post-fudge logits are written to file for analysis")
     
     return parser
@@ -85,7 +85,7 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
     with torch.no_grad():
 
         batch_size = len(input_text) # infer batch size
-
+        # print(batch_size)
         encoder_inputs = tokenizer(input_text, return_tensors='pt', max_length=128, truncation=True, padding=True).to(args.device)
 
         model_kwargs = {
@@ -107,7 +107,7 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
         if args.repetition_penalty != 1.0:
             logits_processor.insert(0, RepetitionPenaltyLogitsProcessor(args.repetition_penalty))
 
-        if args.condition_lambda:
+        if args.condition_lambda > 0.0:
             # instantiate FUDGE logits processor
             fudge_proc = FUDGELogits(
                 tokenizer=tokenizer, 
@@ -242,11 +242,15 @@ def main(args):
     results = predict_simplicity(model, tokenizer, conditioning_model, input_text, args)
     
     print('***')
-    print('INPUT:')
-    pprint.pprint(input_text)
-    print('>>>')
-    pprint.pprint(results)
-    print('***')
+    for in_text, out_text in zip(input_text, results):
+        print('Complex:', in_text)
+        print('Simple:', out_text)
+        print('***')
+    # print('INPUT:')
+    # pprint.pprint(input_text)
+    # print('>>>')
+    # pprint.pprint(results)
+    # print('***')
 
 if __name__=='__main__':
     

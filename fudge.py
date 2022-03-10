@@ -99,7 +99,6 @@ class FUDGELogits(LogitsProcessor):
         :scores: shape([num_beams*batch_size, vocab_size])
         """
         num_beams = input_ids.shape[0]//self.batch_size # infer number of beams
-
         # get precondition logits and indices in vocabulary
         top_logits, top_indices = scores.topk(self.precondition_topk, dim=-1) # scores.shape([num_beams*batch_size, vocab_size]) 
         # top_logits.shape([num_beams*batch_size, topk])
@@ -123,6 +122,7 @@ class FUDGELogits(LogitsProcessor):
             None, None, None
             )
 
+        # breakpoint()
         condition_logits = condition_logits.view(self.batch_size, self.precondition_topk, -1)[:, :, -1].repeat_interleave(num_beams, dim=0) # shape: [num_beams*batch_size, topk] of last FUDGE pred
         
         condition_logits = condition_logits - torch.log(1 + torch.exp(condition_logits)) # get correct log probs

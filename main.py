@@ -9,6 +9,8 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import torch.nn as nn
+from sklearn.metrics import roc_curve, roc_auc_score
+
 
 from data import Dataset
 # from data_v2 import SimplificationDataset as Dataset
@@ -67,6 +69,8 @@ def validate(model, dataset, criterion, epoch, args, logger):
     acc_meter = AverageMeter('acc', ':6.4f')
     total_length = len(loader)
     progress = ProgressMeter(total_length, [loss_meter, acc_meter], prefix='Validation: ')
+    all_preds, all_labels = [], []
+    
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(loader, total=len(loader))):
             batch = [tensor.to(args.device) for tensor in batch]
@@ -93,8 +97,25 @@ def validate(model, dataset, criterion, epoch, args, logger):
                 logger.log({'validation_loss': loss})
             # if batch_num % args.train_print_freq == 0:
             #     progress.display(batch_num)
+
+            if args.compute_auc:
+                all_preds.append(scores.flatten()[length_mask.flatten()==1].cpu())
+                all_labels.append(expanded_labels.flatten().float()[length_mask.flatten()==1].cpu())
+    
     progress.display(total_length)
     # print(loss_meter.avg)
+
+    if args.compute_auc:
+        all_preds = np.concatenate(all_preds, 0)
+        all_labels = np.concatenate(all_labels, 0)
+        # roc curves
+        fpr1, tpr1, thresh1 = roc_curve(all_labels, all_preds, pos_label=1)
+        print('*** ROC CURVE ***')
+        print('FPR:', fpr1, 'TPR:', tpr1, 'THRESHOLDS:', thresh1)
+        # auc scores
+        auc_score1 = roc_auc_score(all_labels, all_preds)
+        print('AUC:', auc_score1)
+
     return loss_meter.avg
 
 
@@ -103,8 +124,8 @@ def main(args):
     # breakpoint()
     os.makedirs(args.save_dir, exist_ok=True)
 
-    with open(os.path.join(args.save_dir, 'dataset_info'), 'wb') as wf:
-        pickle.dump(dataset.dataset_info, wf)
+    # with open(os.path.join(args.save_dir, 'dataset_info'), 'wb') as wf:
+    #     pickle.dump(dataset.dataset_info, wf)
     if args.task == 'rhyme':
         with open(os.path.join(args.save_dir, 'rhyme_info'), 'wb') as wf:
             pickle.dump(dataset.rhyme_info, wf)
@@ -215,6 +236,7 @@ if __name__=='__main__':
     parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
     parser.add_argument('--num_workers', type=int, default=20, help='num workers for data loader')
     parser.add_argument('--evaluate', action='store_true', default=False)
+    parser.add_argument('--compute_auc', action='store_true', default=False)
     parser.add_argument('--debug', action='store_true', default=False)
     parser.add_argument('--bidirectional', type=bool, default=False, help='whether or not LSTM conditioning odel is bidirectional or causal')
 

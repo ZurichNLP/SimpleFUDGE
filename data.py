@@ -136,7 +136,8 @@ class Dataset:
         print('loading data')
         random.seed(args.seed)
         self.batch_size = args.batch_size
-        self.data_dir = args.data_dir
+        # self.path = Path(args.save_dir) / 'data' / 'dataset_splts.pkl'
+        # self.data_dir = args.data_dir
         self.topic = args.task == 'topic'
         self.formality = args.task == 'formality'
         self.iambic = args.task == 'iambic'
@@ -334,13 +335,23 @@ class Dataset:
                 self.splits['test'] = sentences[TOPIC_VAL_SIZE:2*TOPIC_VAL_SIZE]
                 self.splits['train'] = sentences[2*TOPIC_VAL_SIZE:]
 
-        if args.dataset_info is not None:
-            print('loading dataset info from file')
+        dataset_info_path = Path(args.save_dir) / 'dataset_info'
+        if dataset_info_path.exists():
+            print(f'Found exisiting dataset info - loading from file {dataset_info_path}')
+            with open(dataset_info_path, 'rb') as rf:
+                dataset_info = pickle.load(rf)
+            self.vocab, self.total_words, self.index2word, self.word2index, self.glove_embeddings = \
+                dataset_info.vocab, dataset_info.total_words, dataset_info.index2word, dataset_info.word2index, dataset_info.glove_embeddings
+            self.dataset_info = dataset_info
+        
+        elif hasattr(args, 'dataset_info') and args.dataset_info is not None:   
+            print(f'loading dataset info from file {args.dataset_info}')
             with open(args.dataset_info, 'rb') as rf:
                 dataset_info = pickle.load(rf)
             self.vocab, self.total_words, self.index2word, self.word2index, self.glove_embeddings = \
                 dataset_info.vocab, dataset_info.total_words, dataset_info.index2word, dataset_info.word2index, dataset_info.glove_embeddings
             self.dataset_info = dataset_info
+        
         else:
             print('generating dataset info from scratch')
             if args.task != 'simplify':

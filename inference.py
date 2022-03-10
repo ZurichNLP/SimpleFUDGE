@@ -72,10 +72,13 @@ def infer_outfile_name_from_args(args):
     filename += f'_temp{args.temperature}'
     filename += f'_topk{args.top_k}'
     filename += f'_topp{args.top_p}'
+    filename += f'_bs{args.batch_size}'
     filename += '.txt'
 
     # expected format: outpath/generationmodel/testset/monsterhparamstring
-    outfile = Path(args.outpath) / Path(args.generation_model).parts[-1] / Path(args.infile).stem / filename
+    outfile = Path(args.outpath) / Path(args.generation_model).parts[-1] / Path(args.condition_model).parts[-1] / Path(args.infile).stem / filename
+
+    # breakpoint()
     # create output dir if not exists already 
     Path(outfile).parent.mkdir(parents=True, exist_ok=True)
 
@@ -83,7 +86,14 @@ def infer_outfile_name_from_args(args):
         print(f'[!] {outfile} exists and will be overwritten...')
 
     return outfile
-    
+
+# def chunker(iterable, batch_size=4):
+#     return (iterable[pos:pos + batch_size] for pos in range(0, len(iterable), batch_size))
+
+def chunker(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 def main(args):
 
@@ -111,23 +121,36 @@ def main(args):
 
     outfile = infer_outfile_name_from_args(args)
     
-    breakpoint()
+    # breakpoint()
     generated_texts = 0
     start_time = time.time()
     with tqdm(total=quick_lc(args.infile)) as pbar:
         with open(outfile, 'w', encoding='utf8') as outf:
             with open(args.infile, 'r', encoding='utf8') as inf:
-                while True:
-                    batch_lines = list(islice(inf, args.batch_size))
-                    if not batch_lines:
-                        break
+                lines = inf.readlines()
+                for batch_lines in chunker(lines, args.batch_size):
+                # while True:
+                    # batch_lines = list(islice(inf, args.batch_size))
+                    # if not batch_lines:
+                    #     break
+                
                     batch_lines = list(map(preprocess_lines, batch_lines))
                     batch_results = predict_simplicity(generator_model, tokenizer, conditioning_model, batch_lines, args)
 
-                    assert args.num_return_sequences == 1
+                    # assert args.num_return_sequences == 1
+                    # breakpoint()
                     generated_texts += len(batch_results)
-                    for text in batch_results:
-                        outf.write(f'{text}\n')
+                    if args.batch_size > 1:
+                        raise RuntimeError('[!] batched implementation is bugged! Use batch_size=1')
+                        
+                        # for result in chunker(batch_results, args.batch_size):
+                        #     print(result)
+                        #     texts = '\t'.join(result)
+                        #     outf.write(f'{texts}\n')
+                    else:
+                        texts = '\t'.join(batch_results)
+                        outf.write(f'{texts}\n')
+                        
                     
                     pbar.update(args.batch_size)
 
