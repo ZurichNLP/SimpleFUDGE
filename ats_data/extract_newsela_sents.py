@@ -17,15 +17,17 @@ import pandas as pd
 import nltk
 from tqdm import tqdm
 
-def read_article_sentences(filepath):
-    sents = []
+def read_article(filepath):
+    """ keeps paragraph structure """
+    para_sents = []
     with open(filepath, 'r', encoding='utf8') as f:
         for line in f:
             line = line.strip()
             if line:
-                for sent in nltk.sent_tokenize(line):
-                    sents.append(sent)
-    return sents
+                para_sents += [nltk.sent_tokenize(line)]           
+    return para_sents
+
+
 
 if __name__ == '__main__':
 
@@ -33,6 +35,7 @@ if __name__ == '__main__':
     ap.add_argument('--indir', required=True, type=Path, default='/srv/scratch6/kew/ats/data/en/newsela_article_corpus_2016-01-29', help='path to newsela corpus')
     ap.add_argument('--outdir', required=True, type=Path, default='/srv/scratch6/kew/ats/data/en/newsela_article_corpus_2016-01-29/article_sents', help='path to newsela corpus')
     ap.add_argument('--lang', type=str, default='en')
+    ap.add_argument('--level', type=str, choices=['sentence', 'paragraph'], default='sentence', help='whether or not to write one sentence per line or retain some sequences of sentences (experimental)')
     args = ap.parse_args()
     
     meta_data = args.indir / f'articles_metadata_{args.lang}_splits.csv'
@@ -58,6 +61,10 @@ if __name__ == '__main__':
                         print(f'[!] {filepath} does not exist!')
                         continue
 
-                    article_sentences = read_article_sentences(filepath)
-                    for sent in article_sentences:
-                        outf.write(sent + '\n')
+                    article = read_article(filepath)
+                    for para in article:
+                        if args.level == 'paragraph':
+                            outf.write(f'{" ".join(para)}\n')
+                        elif args.level == 'sentence':
+                            for sent in para:
+                                outf.write(f'{sent}\n')
