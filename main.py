@@ -9,7 +9,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import roc_curve, roc_auc_score, accuracy_score, precision_recall_fscore_support
 
 
 from data import Dataset
@@ -61,15 +61,14 @@ def train(model, dataset, optimizer, criterion, epoch, args, data_start_index, l
     return data_start_index
 
 
-def validate(model, dataset, criterion, epoch, args, logger):
+def validate(model, dataset, criterion, epoch, args, logger, threshold=0.0):
     model.eval()
     random.seed(0)
     loader = dataset.loader('val', num_workers=args.num_workers)
     loss_meter = AverageMeter('loss', ':6.4f')
-    acc_meter = AverageMeter('acc', ':6.4f')
     total_length = len(loader)
-    progress = ProgressMeter(total_length, [loss_meter, acc_meter], prefix='Validation: ')
-    all_preds, all_labels = [], []
+    progress = ProgressMeter(total_length, [loss_meter], prefix='Validation: ')
+    all_scores, all_labels = [], []
     
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(loader, total=len(loader))):
@@ -85,38 +84,40 @@ def validate(model, dataset, criterion, epoch, args, logger):
                 loss = criterion(scores.flatten()[length_mask.flatten()==1], expanded_labels.flatten().float()[length_mask.flatten()==1])
                 # report prediction accuracy
                 # https://discuss.pytorch.org/t/when-do-i-turn-prediction-numbers-into-1-and-0-for-binary-classification/130075
-                acc = ((scores.flatten()[length_mask.flatten()==1] > 0.0) == expanded_labels.flatten().float()[length_mask.flatten()==1]).float().mean()
+                # acc = ((scores.flatten()[length_mask.flatten()==1] > threshold) == expanded_labels.flatten().float()[length_mask.flatten()==1]).float().mean()
             elif args.task in ['iambic', 'newline']:
                 use_indices = classification_targets.flatten() != -1
                 loss = criterion(scores.flatten()[use_indices], classification_targets.flatten().float()[use_indices])
             else: # topic, rhyme
                 loss = criterion(scores.flatten(), labels.flatten().float())
             loss_meter.update(loss.detach(), len(labels))
-            acc_meter.update(acc.detach(), len(labels))
-            if logger is not None:
-                logger.log({'validation_loss': loss})
-            # if batch_num % args.train_print_freq == 0:
-            #     progress.display(batch_num)
 
-            if args.compute_auc:
-                all_preds.append(scores.flatten()[length_mask.flatten()==1].cpu())
-                all_labels.append(expanded_labels.flatten().float()[length_mask.flatten()==1].cpu())
+            all_scores.append(scores.flatten()[length_mask.flatten()==1].cpu())
+            all_labels.append(expanded_labels.flatten().float()[length_mask.flatten()==1].cpu())
     
     progress.display(total_length)
-    # print(loss_meter.avg)
+    
+    all_scores = np.concatenate(all_scores, 0)
+    all_labels = np.concatenate(all_labels, 0)
+    pos_label_ratio = all_labels.sum()/len(all_labels)
+    auc_score = roc_auc_score(all_labels, all_scores)
+    all_preds = (all_scores > threshold).astype(int)
+    acc = accuracy_score(all_labels, all_preds)
+    prec, rec, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='binary')
+    
+    if logger is not None:
+        logger.log({
+            'val_loss': loss_meter.avg, 
+            'val_acc': acc, 
+            'val_prec': prec, 
+            'val_rec': rec,
+            'val_f1': f1,
+            'val_auc': auc_score,
+            'pos_label_ratio': pos_label_ratio,
+            })
 
-    if args.compute_auc:
-        all_preds = np.concatenate(all_preds, 0)
-        all_labels = np.concatenate(all_labels, 0)
-        # roc curves
-        fpr1, tpr1, thresh1 = roc_curve(all_labels, all_preds, pos_label=1)
-        print('*** ROC CURVE ***')
-        print('FPR:', fpr1, 'TPR:', tpr1, 'THRESHOLDS:', thresh1)
-        # auc scores
-        auc_score1 = roc_auc_score(all_labels, all_preds)
-        print('AUC:', auc_score1)
 
-    return loss_meter.avg
+    return loss_meter.avg, acc, prec, rec, f1, auc_score, pos_label_ratio
 
 
 def main(args):
@@ -180,19 +181,21 @@ def main(args):
     
     if args.evaluate:
         epoch = 0
-        validate(model, dataset, criterion, epoch, args, logger)
+        loss, acc, prec, rec, f1, auc, label_balance = validate(model, dataset, criterion, epoch, args, logger)
+        print(f'{time.ctime()} | EVALUATION | Epoch {epoch} | loss {loss:.4f} | acc {acc:.4f} | prec {prec:.4f} | rec {rec:.4f} | f1 {f1:.4f} | auc = {auc:.4f} | pos ratio {label_balance:.4f}')
         return
     for epoch in range(args.epochs):
-        print("TRAINING: Epoch {} at {}".format(epoch, time.ctime()))
+        print(f'{time.ctime()} | TRAINING | Epoch {epoch} |')
         data_start_index = train(model, dataset, optimizer, criterion, epoch, args, data_start_index, logger)
         if epoch % args.validation_freq == 0:
-            print("VALIDATION: Epoch {} at {}".format(epoch, time.ctime()))
-            metric = validate(model, dataset, criterion, epoch, args, logger)
+            loss, acc, prec, rec, f1, auc, label_balance = validate(model, dataset, criterion, epoch, args, logger)
+            print(f'{time.ctime()} | VALIDATION | Epoch {epoch} | loss {loss:.4f} | acc {acc:.4f} | prec {prec:.4f} | rec {rec:.4f} | f1 {f1:.4f} | auc = {auc:.4f} | pos ratio {label_balance:.4f}')
+        
 
             if not args.debug:
-                if metric < best_val_metric:
-                    print('new best val metric', metric)
-                    best_val_metric = metric
+                if loss < best_val_metric:
+                    print('new best val metric', loss)
+                    best_val_metric = loss
                     save_checkpoint({
                         'epoch': epoch,
                         'state_dict': model.state_dict(),
@@ -211,6 +214,7 @@ def main(args):
                 #     'args': args
                 # }, os.path.join(args.save_dir, 'model_epoch' + str(epoch) + '.pth.tar'))
 
+    print(f'{time.ctime()} | COMPLETED TRAINING |')
 
 if __name__=='__main__':
     parser = ArgumentParser()
@@ -236,8 +240,8 @@ if __name__=='__main__':
     parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
     parser.add_argument('--num_workers', type=int, default=20, help='num workers for data loader')
     parser.add_argument('--evaluate', action='store_true', default=False)
-    parser.add_argument('--compute_auc', action='store_true', default=False)
     parser.add_argument('--debug', action='store_true', default=False)
+    parser.add_argument('--compute_auc', type=bool, default=True)
     parser.add_argument('--bidirectional', type=bool, default=False, help='whether or not LSTM conditioning odel is bidirectional or causal')
 
     # PRINTING
