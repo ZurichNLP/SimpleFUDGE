@@ -18,7 +18,7 @@ train_simple_newsela_discriminator_glove() {
     GPU=$1
     export CUDA_VISIBLE_DEVICES=$GPU
 
-    data_dir=$SCRATCH/data/en/newsela_article_corpus_2016-01-29/article_sents
+    data_dir=$SCRATCH/data/en/newsela_article_corpus_2016-01-29/article_sentences
     save_dir=$SCRATCH/fudge/discriminators/newsela4_bart_glove
     model_dir=$SCRATCH/fudge/generators/bart_large_paraNMT_filt_fr
 
@@ -47,7 +47,7 @@ train_simple_newsela_discriminator_glove_bidirectional() {
     GPU=$1
     export CUDA_VISIBLE_DEVICES=$GPU
 
-    data_dir=$SCRATCH/data/en/newsela_article_corpus_2016-01-29/article_sents
+    data_dir=$SCRATCH/data/en/newsela_article_corpus_2016-01-29/article_sentences
     save_dir=$SCRATCH/fudge/discriminators/newsela4_bart_glove_bi
     model_dir=$SCRATCH/fudge/generators/bart_large_paraNMT_filt_fr
 
@@ -105,9 +105,9 @@ train_simple_newsela_discriminator() {
 
     GPU=$1
     TGT_LEVEL=$2
-    TGT_FORMAT=$3 # `article_sents` or `article_paragraphs`
+    TGT_FORMAT=$3 # `article_sentences` or `article_paragraphs`
 
-    [[ -z "$TGT_FORMAT" ]] && echo "Specify either `article_sents` or `article_paragraphs`" && exit 1
+    [[ -z "$TGT_FORMAT" ]] && echo "Specify either `article_sentences` or `article_paragraphs`" && exit 1
 
     DATA_DIR=$SCRATCH/data/en/newsela_article_corpus_2016-01-29/$TGT_FORMAT
     TOKENIZER="facebook/bart-large"
@@ -143,7 +143,7 @@ finetune_bart_large_on_muss_mined() {
 
     GPU='3,4,5,6'
     transformers_dir=$BASE/transformers
-    save_dir=$SCRATCH/muss/experiments/huggingface/bart_large_muss_mined_en
+    save_dir=$SCRATCH/fudge/generators/bart_large_muss_mined_en
     data_dir=$SCRATCH/muss/resources/datasets/muss_mined_paraphrases/en_mined_paraphrases
 
     echo "Initialising training run on GPU(s): $GPU"
@@ -207,7 +207,7 @@ hp_search_test() {
         --generation_model $SCRATCH/fudge/generators/$gen_model \
         --outpath $outdir \
         --data_dir $SCRATCH/data/en/aligned \
-        --datasets asset_validation newsela_manual_v0_v4_dev \
+        --datasets asset_dev newsela_manual_v0_v4_dev \
         --max_lines 10
 
     echo "Finished HP sweep. See results in $outdir"
@@ -219,12 +219,8 @@ hp_search_beam() {
     export CUDA_VISIBLE_DEVICES=$GPU
 
     max_lines=$2
-    # cond_model=wiki100M_bart_glove
-    cond_model=$3 # newsela4_bart_glove_bi
-    # cond_model=newsela4_bart_glove
-    # cond_model=wiki100M_bart_glove
-    gen_model=$4 # bart_large_paraNMT_filt_fr
-    # gen_model=bart_large_paraNMT_filt_fr
+    cond_model=$3 # newsela_l4_article_paragraphs
+    gen_model=$4 # bart_large_muss_mined_en
     outdir=$SCRATCH/fudge/hpsearch/$gen_model/$cond_model/beam
 
     mkdir -p $outdir
@@ -236,7 +232,7 @@ hp_search_beam() {
         --generation_model $SCRATCH/fudge/generators/$gen_model \
         --outpath $outdir \
         --data_dir $SCRATCH/data/en/aligned \
-        --datasets asset_validation turk_validation newsela_manual_v0_v4_dev wiki_manual_dev \
+        --datasets newsela_manual_v0_v1_dev newsela_manual_v0_v2_dev newsela_manual_v0_v3_dev newsela_manual_v0_v4_dev asset_dev turk_dev wiki_manual_dev \
         --max_lines $max_lines --batch_size 1 \
         --log_to_file
 
@@ -248,8 +244,8 @@ hp_search_topk() {
     GPU=$1
     export CUDA_VISIBLE_DEVICES=$GPU
 
-    cond_model=wiki100M_bart_glove
-    gen_model=bart_large_paraNMT_filt_fr
+    cond_model=newsela_l4_article_paragraphs
+    gen_model=bart_large_muss_mined_en
     outdir=$SCRATCH/fudge/hpsearch/$gen_model/$cond_model/topk5
 
     mkdir -p $outdir
@@ -262,8 +258,8 @@ hp_search_topk() {
         --do_sample True --top_k 5 \
         --outpath $outdir \
         --data_dir $SCRATCH/data/en/aligned \
-        --datasets asset_validation turk_validation newsela_manual_v0_v4_dev wiki_manual_dev \
-        --max_lines 50 \
+        --datasets newsela_manual_v0_v4_dev asset_dev turk_dev wiki_manual_dev \
+        --max_lines 50 --batch_size 1 \
         --log_to_file
 
     echo "Finished HP sweep. See results in $outdir"
@@ -277,10 +273,8 @@ demo() {
 
     GPU=$1
     export CUDA_VISIBLE_DEVICES=$GPU
-    cond_model=newsela4_bart_glove_bi
-    # cond_model=newsela4_bart_glove
-    # cond_model=wiki100M_bart_glove
-    gen_model=bart_large_paraNMT_filt_fr
+    cond_model=newsela_l4_article_paragraphs
+    gen_model=bart_large_muss_mined_en
     lambda=5
 
     python predict_simplify.py \
@@ -288,8 +282,9 @@ demo() {
         --generation_model $SCRATCH/fudge/generators/$gen_model \
         --condition_lambda $lambda \
         --num_beams 1 --num_return_sequences 1 \
-        --analysis_file /srv/scratch6/kew/ats/fudge/analysis/newsela4_bart_glove-lambda$lambda.json \
         --input_text "Memorial West's class is one of several programs offered through hospitals to help children stay healthy through exercise and proper eating"
+        
+        # --analysis_file $SCRATCH//fudge/analysis/${gen_model}-${cond_model}-l${lambda}.json \
         # --do_sample True --typical_p 0.5
         
 }
@@ -297,30 +292,39 @@ demo() {
 
 decode_data() {
 
-    GPU=$1
-    export CUDA_VISIBLE_DEVICES=$GPU
+    # Example call:
+    #   bash run_experiments.sh decode_data 2 5 newsela_l4_article_paragraphs bart_large_paraNMT_filt_fr dev
+
+    gpu=$1
+    export CUDA_VISIBLE_DEVICES=$gpu
     
-    condition_lambda=$2
-    cond_model=$3 # newsela4_bart_glove_bi
-    # cond_model=newsela4_bart_glove
-    # cond_model=wiki100M_bart_glove
-    gen_model=$4 # bart_large_paraNMT_filt_fr
+    lambda=$2
+    cond_model=$3
+    gen_model=$4
+    split=$5
+    
     data_dir=$SCRATCH/data/en/aligned
     outpath=$SCRATCH/fudge/results
 
     # for file in asset_test.tsv newsela_manual_v0_v4_test.tsv wiki_manual_test.tsv
-    for file in newsela_manual_v0_v4_dev.tsv wiki_manual_dev.tsv asset_validation.tsv
-    do 
+    for file in newsela_manual_v0_v1 newsela_manual_v0_v2 newsela_manual_v0_v3 newsela_manual_v0_v4 wiki_manual asset
+    do
+        # run inference
         python inference.py \
-            --infile $data_dir/$file --outpath $outpath \
+            --infile $data_dir/${file}_${split}.tsv --outpath $outpath \
             --condition_model $SCRATCH/fudge/discriminators/$cond_model \
             --generation_model $SCRATCH/fudge/generators/$gen_model \
-            --condition_lambda $condition_lambda \
+            --condition_lambda $lambda \
             --precondition_topk 100 \
             --batch_size 1 \
             --num_beams 5 --num_return_sequences 5
+        # run evaluation and write result to file
+        python simplification_evaluation.py \
+            --src_file $data_dir/${file}_${split}.tsv \
+            --hyp_file $outpath/$gen_model/$cond_model/${file}_${split}/lambda$lambda*.txt | tee -a $outpath/$gen_model/$cond_model/${file}_${split}/results.csv
     done
 }
+
 
 
 "$@"

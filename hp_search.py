@@ -15,10 +15,10 @@ Considers options for the following params:
 Example Call:
     
     python hp_search.py \
-        --condition_model /srv/scratch6/kew/ats/fudge/discriminators/wiki100M_bart_glove/model_best.pth.tar \
+        --condition_model /srv/scratch6/kew/ats/fudge/discriminators/wiki100M_bart_glove \
         --generation_model /srv/scratch6/kew/ats/fudge/generators/bart_large_paraNMT_filt_fr \
         --outpath hp_search_results \
-        --do_sample --top_k=5 \
+        --do_sample True --top_k 5 \
         --log_to_file \
         --max_lines 50
 """
@@ -46,7 +46,7 @@ logger = logging.getLogger()
 # variables
 ###########
 condition_lambda_sweep = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # [0, 1, 2, 3, 5, 6]
-precondition_topk_sweep = [50, 100, 150, 200]
+precondition_topk_sweep = [200]
 # soft_hard_sweep = [True, False]
 
 

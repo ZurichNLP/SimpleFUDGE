@@ -67,8 +67,8 @@ if __name__ == '__main__':
     pos_class = sys.argv[1]
     neg_classes = sys.argv[2:]
 
-    indir = Path('/srv/scratch6/kew/ats/data/en/newsela_article_corpus_2016-01-29/article_sents/en')
-    tmpdir = Path('/srv/scratch6/kew/ats/data/en/newsela_article_corpus_2016-01-29/article_sents/fasttext/')
+    indir = Path('/srv/scratch6/kew/ats/data/en/newsela_article_corpus_2016-01-29/article_sentences/en')
+    tmpdir = Path('/srv/scratch6/kew/ats/data/en/newsela_article_corpus_2016-01-29/article_sentences/fasttext/')
     tmpdir.mkdir(parents=True, exist_ok=True)
 
     print('preparing data for fasttext...')

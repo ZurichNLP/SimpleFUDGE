@@ -15,21 +15,14 @@ Example Call:
 from pathlib import Path
 import random
 import time
-import pickle
-
-from collections import namedtuple
-from itertools import islice
 
 from tqdm import tqdm
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from transformers import BartTokenizer, BartForConditionalGeneration
 
-from data import Dataset
 from model import Model
-from util import save_checkpoint, ProgressMeter, AverageMeter, num_params
+from util import num_params
 from constants import *
 from predict_simplify import predict_simplicity, generation_arg_parser
 
@@ -87,18 +80,12 @@ def infer_outfile_name_from_args(args):
 
     return outfile
 
-# def chunker(iterable, batch_size=4):
-#     return (iterable[pos:pos + batch_size] for pos in range(0, len(iterable), batch_size))
-
 def chunker(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
 def main(args):
-
-    # with open(args.dataset_info, 'rb') as rf:
-    #     dataset_info = pickle.load(rf)
     
     # load generator
     tokenizer = BartTokenizer.from_pretrained(args.generation_model)
@@ -129,24 +116,15 @@ def main(args):
             with open(args.infile, 'r', encoding='utf8') as inf:
                 lines = inf.readlines()
                 for batch_lines in chunker(lines, args.batch_size):
-                # while True:
-                    # batch_lines = list(islice(inf, args.batch_size))
-                    # if not batch_lines:
-                    #     break
                 
                     batch_lines = list(map(preprocess_lines, batch_lines))
                     batch_results = predict_simplicity(generator_model, tokenizer, conditioning_model, batch_lines, args)
 
-                    # assert args.num_return_sequences == 1
                     # breakpoint()
                     generated_texts += len(batch_results)
                     if args.batch_size > 1:
                         raise RuntimeError('[!] batched implementation is bugged! Use batch_size=1')
                         
-                        # for result in chunker(batch_results, args.batch_size):
-                        #     print(result)
-                        #     texts = '\t'.join(result)
-                        #     outf.write(f'{texts}\n')
                     else:
                         texts = '\t'.join(batch_results)
                         outf.write(f'{texts}\n')
@@ -165,7 +143,7 @@ if __name__=='__main__':
     # add evaluation specific arguments
     parser.add_argument('--infile', type=str, default=None, required=True, help='file containing text to run pred on')
     parser.add_argument('--outpath', type=str, default='/srv/scratch6/kew/ats/fudge/results', required=False, help='file to write generated outputs to')
-    parser.add_argument('--batch_size', type=int, default=4, required=False, help='number of lines to process as a batch for prediction')
+    parser.add_argument('--batch_size', type=int, default=1, required=False, help='number of lines to process as a batch for prediction')
     
     args = parser.parse_args()
 

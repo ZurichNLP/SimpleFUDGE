@@ -58,7 +58,7 @@ Dataset consists of two subsets:
     - 359 for testing
 
 ```
-git clone git@github.com:cocoxu/simplification.git .data/turk
+git clone git@github.com:cocoxu/simplification.git ./data/turk
 ```
 
 #### HSplit (Sulem et al., 2018)

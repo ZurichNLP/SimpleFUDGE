@@ -6,24 +6,13 @@
 """
 Example Call:
 
+    # newsela
     python extract_aligned_sents_wiki_newsela_manual.py \
         --infile /srv/scratch6/kew/ats/data/en/newsela-auto/newsela-manual/all/test.tsv \
         --outfile /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v4_test.tsv \
         --complex_level 0 \
         --simple_level 4
     
-    python extract_aligned_sents_wiki_newsela_manual.py \
-        --infile /srv/scratch6/kew/ats/data/en/newsela-auto/newsela-manual/all/dev.tsv \
-        --outfile /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v4_dev.tsv \
-        --complex_level 0 \
-        --simple_level 4
-    
-    python extract_aligned_sents_wiki_newsela_manual.py \
-        --infile /srv/scratch6/kew/ats/data/en/newsela-auto/newsela-manual/all/train.tsv \
-        --outfile /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v4_train.tsv \
-        --complex_level 0 \
-        --simple_level 4
-
     # wiki-manual
     python extract_aligned_sents_wiki_newsela_manual.py \
         --infile /srv/scratch6/kew/ats/data/en/wiki-auto/wiki-manual/test.tsv \
@@ -31,17 +20,6 @@ Example Call:
         --complex_level 0 \
         --simple_level 1 --wiki
 
-    python extract_aligned_sents_wiki_newsela_manual.py \
-        --infile /srv/scratch6/kew/ats/data/en/wiki-auto/wiki-manual/train.tsv \
-        --outfile /srv/scratch6/kew/ats/data/en/aligned/wiki_manual_train.tsv \
-        --complex_level 0 \
-        --simple_level 1 --wiki
-
-    python extract_aligned_sents_wiki_newsela_manual.py \
-        --infile /srv/scratch6/kew/ats/data/en/wiki-auto/wiki-manual/dev.tsv \
-        --outfile /srv/scratch6/kew/ats/data/en/aligned/wiki_manual_dev.tsv \
-        --complex_level 0 \
-        --simple_level 1 --wiki
 """
 
 import argparse
