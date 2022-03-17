@@ -99,21 +99,49 @@ python simplification_evaluation.py \
     --hyp_file /srv/scratch6/kew/ats/fudge/results/bart_large_paraNMT_filt_fr/turk_test/lambda0.0_pretopk200_beams4_estopFalse_maxl128_minl1_sampleFalse_lp1.0_norep1_bgrps1_nbest1_repp1.0_softFalse_temp1.0_topk0_topp1.0.txt
 ```
 
-## Experiments
+## Model Training
+
+### Discriminator Model Training
+
+```
+# newsela discriminator on sentence-level with level 4 simplifications
+nohup bash run_experiments.sh train_simple_newsela_discriminator 2 4 article_sents >| train_l4.log &
+
+# newsela discriminator on paragraph-level with level 4 simplifications
+nohup bash run_experiments.sh train_simple_newsela_discriminator 2 4 article_paragraphs >| train_l4.log &
+```
+
+### Generator Model Fine-Tuning
+
+```
+# bart-large paraphraser trained on muss mined en
+nohup bash run_experiments.sh finetune_bart_large_on_muss_mined >| finetune.log &
+```
+
+
+
+
+
+---
+
+## TODOs
 
 - [ ] improved classifier
     - [x] initialised from pre-trained glove embeddings
     - [x] increasing model size
     - [x] bidirectional 
     - [ ] using pretrained model, e.g. BERT / BART
-- [ ] improving paraphraser
-    - [ ] training on mined paraphrase sentences à la [MUSS](https://github.com/facebookresearch/muss)
+- [x] improving paraphraser
+    - [x] training on mined paraphrase sentences à la [MUSS](https://github.com/facebookresearch/muss)
 
-## TODOs
 
-- [ ] experiment with improved classifier (e.g.
-  BERT/BART-base) 
-- [ ]
+
+
+
+
+
+
+
 
 <!-- ## TODOs
 - [ ] fix model string inherited from dataset for BART model
