@@ -77,13 +77,21 @@ def extract_pairs(df, cid: List, tgt_level: int = 4):
     c_level = get_level_from_full_id(cid)
     if c_level == tgt_level: # found aligned simple units
         sub_df = df[df['sid'].isin(cid)]
-        sents = ' '.join(sub_df.ssent.tolist())
+        sents = ' '.join(dedup_sents(sub_df.ssent.tolist()))
         return sents
         
     else: # recursion
         sub_df = df[df['cid'].isin(cid)]
         next_cid = sub_df.sid.tolist()
         return extract_pairs(df, next_cid, tgt_level)
+
+def dedup_sents(lst):
+    """
+    Removes duplicate sentences from a set of aligned sentences keeping order
+    """
+    no_dupes = []
+    [no_dupes.append(elem) for elem in lst if not no_dupes.count(elem)]    
+    return no_dupes
 
 def test():
     df = pd.read_csv(args.infile, sep='\t', header=None, names=['label', 'sid', 'cid', 'ssent', 'csent'], quoting=csv.QUOTE_NONE)
@@ -114,8 +122,11 @@ def parse_newsela_data(args):
     # collect alignments
     alignments = []
     for root_node in root_nodes:
-        sub_df = df[(df['cid'].isin(root_node))]
-        csents = sub_df.csent.tolist()
+        sub_df = df[(df['cid'].isin(root_node))] 
+        
+        csents = dedup_sents(sub_df.csent.tolist())
+        if len(set(csents)) != len(csents):
+            breakpoint()
         try:
             src = ' '.join(csents)
         except TypeError:
