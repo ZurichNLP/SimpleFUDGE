@@ -151,3 +151,5 @@ nohup*
 legacy/
 ._*
 scratch/
+data/
+data
