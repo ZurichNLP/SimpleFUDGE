@@ -11,10 +11,14 @@ os.environ['TRANSFORMERS_CACHE']='.'
 
 from transformers import GPT2TokenizerFast, GPT2LMHeadModel
 # Load pre-trained model (weights)
-model = GPT2LMHeadModel.from_pretrained('distilgpt2')
+model = GPT2LMHeadModel.from_pretrained('gpt2')
 model.eval()
+
+if torch.cuda.is_available():
+    model.cuda()
+
 # Load pre-trained model tokenizer (vocabulary)
-tokenizer = GPT2TokenizerFast.from_pretrained('distilgpt2')
+tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
 
 def distilGPT2_perplexity_score(sentence):
     sentence = sentence.strip()
@@ -23,6 +27,6 @@ def distilGPT2_perplexity_score(sentence):
     else:
         tokenize_input = tokenizer.tokenize(sentence)
         tensor_input = torch.tensor(
-            [tokenizer.convert_tokens_to_ids(tokenize_input)])
+            [tokenizer.convert_tokens_to_ids(tokenize_input)]).to(model.device)
         loss, logits = model(tensor_input, labels=tensor_input)[:2]
         return math.exp(loss)
