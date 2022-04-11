@@ -26,7 +26,13 @@ python extract_newsela_data_for_fudge.py \
     --indir $NEWSELA_DIR \
     --outdir $NEWSELA_DIR/article_sentences \
     --meta_data $NEWSELA_DIR/articles_metadata_en_splits.csv \
-    --format sentence 
+    --format sentence
+
+python extract_newsela_data_for_fudge.py \
+    --indir $NEWSELA_DIR \
+    --outdir $NEWSELA_DIR/article_para_sents \
+    --meta_data $NEWSELA_DIR/articles_metadata_en_splits.csv \
+    --format mixed
 
 # for spanish
 python extract_newsela_data_for_fudge.py \
@@ -40,6 +46,12 @@ python extract_newsela_data_for_fudge.py \
     --outdir $NEWSELA_DIR/article_sentences_es \
     --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
     --format sentence
+
+python extract_newsela_data_for_fudge.py \
+    --indir $NEWSELA_DIR \
+    --outdir $NEWSELA_DIR/article_para_sents_es \
+    --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
+    --format mixed
 
 echo ""
 echo "Succesfully extracted sentences: $NEWSELA_DIR/article_sentences/"

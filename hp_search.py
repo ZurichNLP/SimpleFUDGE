@@ -60,7 +60,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_to_file', action='store_true', required=False, help='whether or not to send logs to file `outpath/hp_search.log`. If not, logs are printed to stdout')
     parser.add_argument('--outpath', type=str, default=None, required=True, help='output file for results csv')
     parser.add_argument('--batch_size', type=int, default=1, required=False, help='number of lines to process as a batch for prediction')
-    parser.add_argument('--max_lines', type=int, default=10, required=False, help='number of lines from validation file to process for generation')
+    parser.add_argument('--max_lines', type=int, default=-1, required=False, help='number of lines from validation file to process for generation')
 
     parser.add_argument('--data_dir', type=str, default='/srv/scratch6/kew/ats/data/en/aligned', required=False, help='directory containing aligned test/validation files')
 
@@ -106,16 +106,19 @@ if __name__ == '__main__':
                 for precondition_topk in precondition_topk_sweep:
                     vargs['precondition_topk'] = precondition_topk
                     logger.info(f'precondition_topk = {precondition_topk}...')
-                    # for val in soft_hard_sweep:
-                    #     vargs['soft'] = val
-                    #     logger.info(f'soft = {val}...')
 
-                    hyp_sents = []
-                    sents = read_split_lines(infile, '\t')[:args.max_lines] # threshold lines used for validation
+                    if args.max_lines > 0:
+                        sents = read_split_lines(infile, '\t')[:args.max_lines] # threshold lines used for validation
+                    else:
+                        sents = read_split_lines(infile, '\t') # threshold lines used for validation
+
                     src_sents = [i[0] for i in sents]
                     refs_sents = [i[1:] for i in sents]
                     refs_sents = list(map(list, [*zip(*refs_sents)])) # transpose to number samples x len(test set)
-                    # for batch in tqdm(chunker(src_sents, args.batch_size), total=len(src_sents)//args.batch_size):
+
+                    logger.info(f'Number of development instances: {len(src_sents)}')
+
+                    hyp_sents = []                    
                     for batch in chunker(src_sents, args.batch_size):
                         outputs = predict_simplicity(generator_model, tokenizer, conditioning_model, batch, SimpleNamespace(**vargs))
                         hyp_sents.extend(outputs)

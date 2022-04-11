@@ -16,6 +16,12 @@ Example call:
         --meta_data $DATA_DIR/articles_metadata_en_splits.csv \
         --format sentence 
 
+    python extract_newsela_data_for_fudge.py \
+        --indir $DATADIR \
+        --outdir $DATADIR/article_para_sents \
+        --meta_data $DATA_DIR/articles_metadata_en_splits.csv \
+        --format mixed
+
 """
 
 import argparse
@@ -23,6 +29,10 @@ from pathlib import Path
 import pandas as pd
 import nltk
 from tqdm import tqdm
+import random
+
+SEED = 42
+r = random.Random(SEED)
 
 def read_article(filepath):
     """ keeps paragraph structure """
@@ -40,7 +50,7 @@ if __name__ == '__main__':
     ap.add_argument('--indir', required=True, type=Path, default=None, help='path to newsela corpus')
     ap.add_argument('--outdir', required=True, type=Path, default=None, help='path to output directory')
     ap.add_argument('--meta_data', required=True, type=str, default=None, help='csv file containing newsela article names and test/train/validation split information.')
-    ap.add_argument('--format', required=True, type=str, choices=['sentence', 'paragraph'], default='sentence', help='whether or not to write one sentence per line or retain some sequences of sentences (experimental)')
+    ap.add_argument('--format', required=True, type=str, choices=['sentence', 'paragraph', 'mixed'], default='sentence', help='whether or not to write one sentence per line or retain some sequences of sentences (experimental)')
     args = ap.parse_args()
         
     df = pd.read_csv(args.meta_data, header=0)
@@ -71,3 +81,14 @@ if __name__ == '__main__':
                         elif args.format == 'sentence':
                             for sent in para:
                                 outf.write(f'{sent}\n')
+                        else: # mixed - split all long parapraphs to single sents and coin flip to decide for others.
+                            if len(para) < 5:
+                                if bool(r.randint(0, 1)): # if 1 (TRUE) split sentences
+                                    outf.write(f'{" ".join(para)}\n')
+                                else:
+                                    for sent in para:
+                                        outf.write(f'{sent}\n')
+                            else: # split all long paragraphs
+                                for sent in para:
+                                    outf.write(f'{sent}\n')
+                        

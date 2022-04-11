@@ -39,7 +39,7 @@ def generation_arg_parser(description=None):
     parser = ArgumentParser(description)
 
     # DATA
-    parser.add_argument('--condition_model', type=str, required=True)
+    parser.add_argument('--condition_model', type=str, required=False, default=None)
     # parser.add_argument('--dataset_info', type=str, required=False, help='saved dataset info')
     parser.add_argument('--generation_model', type=str, required=True, help='path to finetuned model or huggingface identifier')
     parser.add_argument('--seed', type=int, default=1, help='random seed')
@@ -97,16 +97,8 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
         # for BART: https://huggingface.co/docs/transformers/model_doc/bart#transformers.BartConfig
         decoder_input_ids = decoder_input_ids * model.config.decoder_start_token_id
 
-        
         logits_processor = LogitsProcessorList()
-        
-        if args.min_length:
-            # min length logits processor needs to be before FUDGE
-            logits_processor.insert(0, MinLengthLogitsProcessor(args.min_length, eos_token_id=model.config.eos_token_id))
             
-        if args.repetition_penalty != 1.0:
-            logits_processor.insert(0, RepetitionPenaltyLogitsProcessor(args.repetition_penalty))
-
         if args.condition_lambda > 0.0:
             # instantiate FUDGE logits processor
             fudge_proc = FUDGELogits(
@@ -121,6 +113,13 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
                 )
             logits_processor.insert(0, fudge_proc)
         
+        if args.repetition_penalty != 1.0:
+            logits_processor.insert(0, RepetitionPenaltyLogitsProcessor(args.repetition_penalty))
+
+        if args.min_length and args.num_beams > 1:
+            # min length logits processor needs to be before FUDGE
+            logits_processor.insert(0, MinLengthLogitsProcessor(args.min_length, eos_token_id=model.config.eos_token_id))
+
         if args.verbose:
             print('Logits Processor List:', logits_processor)
 
@@ -187,6 +186,7 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
 
             else: # regular geedy decoding with FUDGE 
                 # NOTE: should be the same as original implementation
+                # NOTE: greedy decoding fails with min_length_logits_processor!
                 outputs = model.greedy_search(
                     decoder_input_ids, 
                     logits_processor=logits_processor,
@@ -196,21 +196,22 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
         return tokenizer.batch_decode(outputs, skip_special_tokens=True, clean_up_tokenization_spaces=True)
 
 def main(args):
-    # with open(args.dataset_info, 'rb') as rf:
-    #     dataset_info = pickle.load(rf)
     
     tokenizer = BartTokenizer.from_pretrained(args.generation_model)
     model = BartForConditionalGeneration.from_pretrained(args.generation_model, return_dict=True).to(args.device)
     model.eval()
 
-    condition_model_ckpt = Path(args.condition_model) / 'model_best.pth.tar'
-    checkpoint = torch.load(condition_model_ckpt, map_location=args.device)
-    model_args = checkpoint['args']
-    conditioning_model = Model(model_args, tokenizer.pad_token_id, tokenizer.vocab_size) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
-    conditioning_model.load_state_dict(checkpoint['state_dict']) # NOTE when loading state_dict for Model, size mismatch for marian_embed.weight: copying a param with shape torch.Size([65002, 300]) from checkpoint, the shape in current model is torch.Size([50266, 300])
-    conditioning_model = conditioning_model.to(args.device)
-    conditioning_model.eval()
-    
+    if args.condition_model:
+        condition_model_ckpt = Path(args.condition_model) / 'model_best.pth.tar'
+        checkpoint = torch.load(condition_model_ckpt, map_location=args.device)
+        model_args = checkpoint['args']
+        conditioning_model = Model(model_args, tokenizer.pad_token_id, tokenizer.vocab_size) # no need to get the glove embeddings when reloading since they're saved in model ckpt anyway
+        conditioning_model.load_state_dict(checkpoint['state_dict']) # NOTE when loading state_dict for Model, size mismatch for marian_embed.weight: copying a param with shape torch.Size([65002, 300]) from checkpoint, the shape in current model is torch.Size([50266, 300])
+        conditioning_model = conditioning_model.to(args.device)
+        conditioning_model.eval()
+    else:
+        conditioning_model = None
+
     if args.verbose:
         print("=> loaded checkpoint '{}' (epoch {})"
             .format(condition_model_ckpt, checkpoint['epoch']))

@@ -98,6 +98,7 @@ class FUDGELogits(LogitsProcessor):
         :input_ids: shape([num_beams*batch_size, seq_len])
         :scores: shape([num_beams*batch_size, vocab_size])
         """
+        # breakpoint()
         num_beams = input_ids.shape[0]//self.batch_size # infer number of beams
         # get precondition logits and indices in vocabulary
         top_logits, top_indices = scores.topk(self.precondition_topk, dim=-1) # scores.shape([num_beams*batch_size, vocab_size]) 
@@ -140,11 +141,13 @@ class FUDGELogits(LogitsProcessor):
         if self.analysis_file is not None:
             with open(self.analysis_file, 'a+', encoding='utf8') as outf:
                 d = {
+                    'prev_token': self.tokenizer.batch_decode(input_ids[-1])[-1],
                     'time_step': input_ids.shape[-1],
                     'top_tokens': [self.tokenizer.batch_decode(top_indices[i]) for i in range(len(top_indices))],
                     'pre_scores': top_logits.tolist(),
                     'post_scores': fudge_logits.tolist(),
                 }
+                # breakpoint()
                 d = json.dumps(d)
                 outf.write(f'{d}\n')
 

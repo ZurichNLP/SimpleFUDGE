@@ -33,6 +33,7 @@ def train(model, dataset, optimizer, criterion, epoch, args, data_start_index, l
     loss_meter = AverageMeter('loss', ':6.4f')
     total_length = len(loader)
     progress = ProgressMeter(total_length, [loss_meter], prefix='Training: ')
+    # breakpoint()
     for batch_num, batch in enumerate(tqdm(loader, total=len(loader))):
         batch = [tensor.to(args.device) for tensor in batch]
         inputs, lengths, future_words, log_probs, labels, classification_targets, syllables_to_go, future_word_num_syllables, rhyme_group_index = batch
@@ -41,6 +42,7 @@ def train(model, dataset, optimizer, criterion, epoch, args, data_start_index, l
                 continue
         scores = model(inputs, lengths, future_words, log_probs, syllables_to_go, future_word_num_syllables, rhyme_group_index, run_classifier=True)
         if args.task in ['formality', 'simplify']: # we're learning for all positions at once. scores are batch x seq
+            # breakpoint()
             expanded_labels = classification_targets.unsqueeze(1).expand(-1, scores.shape[1]) # batch x seq
             length_mask = pad_mask(lengths).permute(1, 0) # batch x seq
             loss = criterion(scores.flatten()[length_mask.flatten()==1], expanded_labels.flatten().float()[length_mask.flatten()==1])
@@ -249,7 +251,8 @@ if __name__=='__main__':
 
     # added for ATS
     parser.add_argument('--model_path_or_name', type=str, default=None, help='pre-trained/fine-tuned model directory with tokenizer to use.')
-    parser.add_argument('--tgt_level', type=int, default=4, help='simplification level corresponding to newsela metadata')
+    parser.add_argument('--tgt_level', type=str, default="4", help='simplification level corresponding to newsela metadata')
+    parser.add_argument('--use_line_parts', action='store_true', default=False, help='whether or not to train FUDGE on constituent word sequences')
     parser.add_argument('--wandb', type=str, default=None, help='wandb project space for logging')
 
     args = parser.parse_args()

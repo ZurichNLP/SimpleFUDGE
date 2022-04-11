@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+
+Example call:
+
+    python manual_inspection.py \
+        --src_file \
+
+"""
+
+import argparse
+import random
+from typing import Dict, List, Tuple
+from tqdm import tqdm
+import numpy as np
+
+from easse import sari, bleu, fkgl
+
+def set_args():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--src_file', type=str, required=True, default=None)
+    ap.add_argument('--muss_outputs', type=str, required=False, default=None)
+    ap.add_argument('--fudge_outputs', type=str, required=False, default=None)
+    ap.add_argument('--super_outputs', type=str, required=False, default=None)
+    ap.add_argument('-n', type=int, required=False, default=5)
+    ap.add_argument('--seed', type=int, required=False, default=42)
+    ap.add_argument('--score', type=str, choices=['sari', 'bleu', 'fkgl'], required=False, default=None)
+    return ap.parse_args()
+
+def read_split_lines(filename: str, split_sep: str = '\t') -> Tuple[List[str]]:
+    """from easse/utils/helpers.py"""
+    texts, more_texts = [], []
+    with open(filename, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip().split(split_sep)
+            texts.append(line[0])
+            if len(line) == 2:
+                more_texts.append(line[1])
+    return texts, more_texts
+
+def read_parallel_files(args) -> Dict:
+
+    src_texts, tgt_texts = read_split_lines(args.src_file) if args.src_file is not None else None
+    muss_texts, _ = read_split_lines(args.muss_outputs) if args.muss_outputs is not None else None
+    fudge_texts, _ = read_split_lines(args.fudge_outputs) if args.fudge_outputs is not None else None
+    super_texts, _ = read_split_lines(args.super_outputs) if args.super_outputs is not None else None
+
+    if src_texts is not None and muss_texts is not None:
+        assert len(src_texts) == len(muss_texts)
+
+    elif src_texts is not None and fudge_texts is not None:
+        assert len(src_texts) == len(fudge_texts)
+
+    if src_texts is not None and super_texts is not None:
+        assert len(src_texts) == len(super_texts)
+
+    return {
+        'src_texts': src_texts,
+        'tgt_texts': src_texts,
+        'muss_texts': muss_texts,
+        'fudge_texts': fudge_texts,
+        'super_texts': super_texts,
+    }
+
+
+def view_samples(data: Dict) -> None:
+    """ inspect a sample of outputs on command line """
+    samples = random.Random(args.seed).sample(list(range(len(data['src_texts']))), args.n)
+    for idx in samples:
+        print('-'*5)
+        if data['src_texts'] is not None:
+            print(f"SRC {idx}\t: {data['src_texts'][idx]}")
+        if data['tgt_texts'] is not None:
+            print(f"TGT \t: {data['tgt_texts'][idx]}")
+        if data['muss_texts'] is not None:
+            print(f"MUSS\t: {data['muss_texts'][idx]}")
+        if data['fudge_texts']  is not None:
+            print(f"FUDGE\t: {data['fudge_texts'][idx]}")
+        if data['super_texts']  is not None:
+            print(f"SUPER\t: {data['super_texts'][idx]}")
+    return
+
+
+def _score_sents_sari(src_texts, ref_texts, hyp_texts):
+    """
+    orig_sents: list of original sentences (len = n_samples)
+    sys_sents: list of system sentences (len = n_samples)
+    refs_sents: list of list of reference sentences (shape = (n_references, n_samples))
+    """
+
+    scores = np.zeros(len(src_texts))
+    for i in tqdm(range(len(src_texts))):
+        scores[i] = sari.corpus_sari(
+            [src_texts[i]], 
+            [hyp_texts[i]],
+            [[ref_texts[i]]], 
+            )
+    return scores
+
+def compute_divergence(data, args):
+    
+    if args.score == 'sari':
+        muss_scores = _score_sents_sari(data['src_texts'], data['tgt_texts'], data['muss_texts'])
+        fudge_scores = _score_sents_sari(data['src_texts'], data['tgt_texts'], data['fudge_texts'])
+        super_scores = _score_sents_sari(data['src_texts'], data['tgt_texts'], data['super_texts'])
+    elif args.score == 'bleu':
+        pass
+
+    diff_muss_fudge = muss_scores - fudge_scores
+    diff_super_fudge = super_scores - fudge_scores
+    
+    for idx in diff_muss_fudge.argsort():
+        print(diff_muss_fudge[idx])
+        print(f"SRC {idx}\t: {data['src_texts'][idx]}")
+        print(f"TGT \t: {data['tgt_texts'][idx]}")
+        print(f"MUSS\t: {data['muss_texts'][idx]}")
+        print(f"FUDGE\t: {data['fudge_texts'][idx]}")
+diff_super_fudge    
+    
+    for idx in diff_super_fudge.argsort():
+        print(diff_super_fudge[idx])
+        print(f"SRC {idx}\t: {data['src_texts'][idx]}")
+        print(f"TGT \t: {data['tgt_texts'][idx]}")
+        print(f"SUPER\t: {data['super_texts'][idx]}")
+        print(f"FUDGE\t: {data['fudge_texts'][idx]}")
+    
+    breakpoint()
+
+    return
+
+
+if __name__ == "__main__":
+
+    args = set_args()
+
+    data = read_parallel_files(args)
+
+    if not args.score:
+        view_samples(data)
+    else:
+        compute_divergence(data, args)

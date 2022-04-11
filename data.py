@@ -5,11 +5,12 @@ from pathlib import Path
 import pickle
 from collections import defaultdict, namedtuple
 import string
+import tokenize
 import pandas as pd
 
 os.environ['TOKENIZERS_PARALLELISM'] = 'false' # turn off since we're using multiple threads for loading anyway
 
-from transformers import AutoTokenizer, AutoModelWithLMHead, pipeline, set_seed, GPT2Tokenizer, GPT2Model
+from transformers import AutoTokenizer
 import numpy as np
 from tqdm import tqdm
 import torch
@@ -23,29 +24,48 @@ DatasetInfo = namedtuple('DatasetInfo',
 RhymeInfo = namedtuple('RhymeInfo', 
                 ['word2rhyme_group', 'rhyme_group_counts', 'rhyme_groups', 'index2rhyme_group', 'rhyme_group2index', 'total_rhyme_groups'])
 
+SEED = 42
+np.random.seed(SEED)
 
 def checker(string):
     # string = string.replace(' ', '')
-    string = string.replace('Ġ', '') # special char for BPE
+    string = string.replace('[Ġ▁]', '') # special char for BPE
     return string.strip().lower()
 
-## Pytorch
-def map_tokens_to_glove(tokenizer, embedding_file, glove_string):
+
+def init_random_embeddings(tokenizer):
+    print('Initializing random ebmedding matrix...')
+    holder = np.zeros((tokenizer.vocab_size, 300), dtype=np.float32) # ensure float 32 for compatibility during training
+    for i in tqdm(range(tokenizer.vocab_size), total=tokenizer.vocab_size):
+        holder[i, :] = np.random.rand((300))
+    return holder
+
+def map_tokens_to_glove(tokenizer, embedding_file, glove_string, GLOVE_DIM=300):
     """
     Adapted from K2T https://github.com/dapascual/K2T/blob/main/utility_gpt.py
     """
     Path(embedding_file.parent).mkdir(parents=True, exist_ok=True)
     
-    print('Loading pre-trained embeddings from Gensim...')
-    import gensim.downloader as api
-    glove_encoder = api.load(glove_string)
+    if Path(glove_string).exists() and Path(glove_string).is_file():
+        print(f'Loading pre-trained embeddings from file {glove_string}')
+        glove_encoder = {}
+        with open(glove_string, 'r', encoding='utf8') as inf:
+            for line in tqdm(inf):
+                line = line.strip().split()
+                if len(line) != GLOVE_DIM + 1:
+                    print(f'Skipping {" ".join(line[:10])}')
+                    continue # skip multi-word embeddings which are rare anyway
+                glove_encoder[line[0]] = [float(x) for x in line[1:]]
+    else:
+        print(f'Loading pre-trained embeddings from Gensim ({glove_string})')
+        import gensim.downloader as api
+        glove_encoder = api.load(glove_string)
 
-    holder = np.zeros((tokenizer.vocab_size, 300), dtype=np.float32) # ensure float 32 for compatibility during training
-    
+    holder = np.zeros((tokenizer.vocab_size, GLOVE_DIM), dtype=np.float32) # ensure float 32 for compatibility during training
     # look up glove representations for each token from the generator model's tokenizer
     null_words = set()
+    # breakpoint()
     for i in tqdm(range(tokenizer.vocab_size), total=tokenizer.vocab_size):
-        # breakpoint()
         try:
             word = tokenizer.decode([i])
             glove_emb = glove_encoder[checker(word)]
@@ -54,10 +74,8 @@ def map_tokens_to_glove(tokenizer, embedding_file, glove_string):
             word = tokenizer.decode([i])
             null_words.add(word)
             # holder[i, :] = np.zeros((300), dtype=np.float32)
-            holder[i, :] = np.random.rand((300))
+            holder[i, :] = np.random.rand((GLOVE_DIM))
 
-    # print(null_words)
-    # print(f'Number of tokens initialised with zero verctor {len(null_words)}')
     print(f'Number of token embeddings randomly initialised {len(null_words)}')
     np.save(file=str(embedding_file.with_suffix('')), arr=holder) # save for quicker loading later
 
@@ -189,12 +207,13 @@ class Dataset:
 
         elif self.simplify:
 
+            # breakpoint()
             outpath = Path(args.save_dir) / 'dataset_splts.pkl'
             if outpath.exists():
                 with open(outpath, 'rb') as inf:
                     self.splits = pickle.load(inf)
                     print(f'loaded pre-compiled data splits from {outpath}')
-
+                    # breakpoint()
             ###########
             # WIKIPEDIA
             ###########
@@ -242,9 +261,9 @@ class Dataset:
                     else:
                         break
                 
-                random.shuffle(self.splits['train'])
-                random.shuffle(self.splits['val'])
-                random.shuffle(self.splits['test'])
+                random.Random(SEED).shuffle(self.splits['train'])
+                random.Random(SEED).shuffle(self.splits['val'])
+                random.Random(SEED).shuffle(self.splits['test'])
 
                 # pickle dataset for later
                 with open(outpath, 'wb') as pklf:
@@ -264,10 +283,13 @@ class Dataset:
                 # collect positive samples
                 pos_train, pos_val, pos_test = [], [], []
                 for split in ['train', 'test', 'valid']:
-                    with open(os.path.join(args.data_dir, f'{split}_{str(args.tgt_level)}.txt'), 'r') as rf:
+                    with open(os.path.join(args.data_dir, f'{split}_{args.tgt_level}.txt'), 'r') as rf:
                         for i, line in enumerate(rf):
-                            #line_parts = split_line(line.strip())
-                            line_parts = [line.strip()]
+                            if args.use_line_parts:
+                                line_parts = split_line(line.strip()) # this doesn't seem to make a difference
+                            else:
+                                line_parts = [line.strip()]
+                            
                             for lp in line_parts:
                                 if split == 'test':
                                     pos_test.append((lp, 1))
@@ -280,14 +302,17 @@ class Dataset:
                 # collect all negative samples, i.e. sentences
                 # from more complex language levels in Newsela
                 neg_train, neg_val, neg_test = [], [], []
-                # neg_simp_levels = list(filter(lambda x: x < args.tgt_level, simp_levels))
+                # neg_simp_levels = list(filter(lambda x: x < int(args.tgt_level) simp_levels))
                 neg_simp_levels = [0]
                 for split in ['train', 'test', 'valid']:
                     for simp_level in neg_simp_levels:
-                        with open(os.path.join(args.data_dir, f'{split}_{str(simp_level)}.txt'), 'r') as rf:
+                        with open(os.path.join(args.data_dir, f'{split}_{simp_level}.txt'), 'r') as rf:
                             for i, line in enumerate(rf):
-                                #line_parts = split_line(line.strip())
-                                line_parts = [line.strip()]
+                                if args.use_line_parts:
+                                    line_parts = split_line(line.strip()) # this doesn't seem to make a difference
+                                else:
+                                    line_parts = [line.strip()]
+
                                 for lp in line_parts:
                                     if split == 'test':
                                         neg_test.append((lp, 0))
@@ -297,17 +322,91 @@ class Dataset:
                                         neg_train.append((lp, 0))
 
                 # shuffle collected negative samples
-                random.shuffle(neg_train)
-                random.shuffle(neg_val)
-                random.shuffle(neg_test)
+                random.Random(SEED).shuffle(neg_train)
+                random.Random(SEED).shuffle(neg_val)
+                random.Random(SEED).shuffle(neg_test)
                 self.splits = {}
                 self.splits['train'] = pos_train + neg_train[:len(pos_train)]
                 self.splits['val'] = pos_val + neg_val[:len(pos_val)]
                 self.splits['test'] = pos_test + neg_test[:len(pos_test)]
 
-                random.shuffle(self.splits['train'])
-                random.shuffle(self.splits['val'])
-                random.shuffle(self.splits['test'])
+                random.Random(SEED).shuffle(self.splits['train'])
+                random.Random(SEED).shuffle(self.splits['val'])
+                random.Random(SEED).shuffle(self.splits['test'])
+
+                # pickle dataset for later
+                with open(outpath, 'wb') as pklf:
+                    pickle.dump(self.splits, pklf, pickle.HIGHEST_PROTOCOL)
+                print(f'saved data splits in {outpath}')
+
+        ####################
+
+            ############
+            # APA CAPITO
+            ############
+            
+            elif 'apa_capito' in args.data_dir:
+                
+                self.vocab['placeholder'] = 1 # anything so we don't crash
+                # breakpoint()
+                # collect positive samples
+                pos_train, pos_val, pos_test = [], [], []
+                for split in ['train', 'test', 'dev']:
+                    # /srv/scratch6/kew/ats/data/de/apa_capito/article_paragraphs/train_or-A1.de
+                    with open(os.path.join(args.data_dir, f'{split}_or-{args.tgt_level}.simpde'), 'r') as rf:
+                        for i, line in enumerate(rf):
+                            if args.use_line_parts:
+                                line_parts = split_line(line.strip()) # this doesn't seem to make a difference
+                            else:
+                                line_parts = [line.strip()]
+                            
+                            for lp in line_parts:
+                                # breakpoint()
+                                if len(self.tokenizer.tokenize(lp)) > self.tokenizer.model_max_length:
+                                    continue
+                                if split == 'test':
+                                    pos_test.append((lp, 1))
+                                elif split == 'dev':
+                                    pos_val.append((lp, 1))
+                                else:
+                                    pos_train.append((lp, 1))
+
+                
+                # collect all negative samples, i.e. sentences
+                # from more complex language levels in Newsela
+                neg_train, neg_val, neg_test = [], [], []
+                # neg_simp_levels = list(filter(lambda x: x < int(args.tgt_level), simp_levels))
+                
+                for split in ['train', 'test', 'dev']:
+                    with open(os.path.join(args.data_dir, f'{split}_or-{args.tgt_level}.de'), 'r') as rf:
+                        for i, line in enumerate(rf):
+                            if args.use_line_parts:
+                                line_parts = split_line(line.strip()) # this doesn't seem to make a difference
+                            else:
+                                line_parts = [line.strip()]
+                            
+                            for lp in line_parts:
+                                if len(self.tokenizer.tokenize(lp)) > self.tokenizer.model_max_length:
+                                    continue
+                                if split == 'test':
+                                    neg_test.append((lp, 0))
+                                elif split == 'dev':
+                                    neg_val.append((lp, 0))
+                                else:
+                                    neg_train.append((lp, 0))
+
+                # shuffle collected negative samples
+                random.Random(SEED).shuffle(neg_train)
+                random.Random(SEED).shuffle(neg_val)
+                random.Random(SEED).shuffle(neg_test)
+                self.splits = {}
+                self.splits['train'] = pos_train + neg_train[:len(pos_train)]
+                self.splits['val'] = pos_val + neg_val[:len(pos_val)]
+                self.splits['test'] = pos_test + neg_test[:len(pos_test)]
+
+                random.Random(SEED).shuffle(self.splits['train'])
+                random.Random(SEED).shuffle(self.splits['val'])
+                random.Random(SEED).shuffle(self.splits['test'])
 
                 # pickle dataset for later
                 with open(outpath, 'wb') as pklf:
@@ -324,7 +423,7 @@ class Dataset:
                             sentences.append(line.strip())
                             for word in line.strip().split(' '):
                                 self.vocab[word] += 1
-            random.shuffle(sentences)
+            random.Random(SEED).shuffle(sentences)
             self.splits = {}
             if args.debug:
                 self.splits['val'] = sentences
@@ -352,19 +451,32 @@ class Dataset:
                 dataset_info.vocab, dataset_info.total_words, dataset_info.index2word, dataset_info.word2index, dataset_info.glove_embeddings
             self.dataset_info = dataset_info
         
-        else:
-            print('generating dataset info from scratch')
-            if args.task != 'simplify':
-                words_values = list(self.vocab.items())
-                words_values = sorted(words_values, key=lambda x: x[1], reverse=True)
-            
+        else: # create dataset info
+            # original impl.
+            # if args.task != 'simplify':
+            #     words_values = list(self.vocab.items())
+            #     words_values = sorted(words_values, key=lambda x: x[1], reverse=True)
+
+            print('generating dataset info from scratch')                
             if args.glove is None:
                 print('no glove embeddings given')
-                for word, _ in words_values[VOCAB_SIZE:]: # only use somewhat common tokens
-                    del self.vocab[word]
-                glove_embeddings = None
+            
+                words_values = list(self.tokenizer.vocab.items())
+                words_values = sorted(words_values, key=lambda x: x[1], reverse=False)
+                # breakpoint()
+                # for word, _ in words_values[self.tokenizer.vocab_size:]: # only use somewhat common tokens
+                    # self.vocab = 
+                    # del self.vocab[word]
+                self.vocab = dict(words_values)
+                self.total_words = len(self.vocab)
+                self.word2index = self.tokenizer.vocab
+                self.index2word = {v:k for k, v in self.tokenizer.vocab.items()} # TODO need to remove prefix token?
+                # self.vocab = self.tokenizer.vocab
+                self.embedding_file = None
+                self.glove_embeddings = None
             else:
-                if args.task != 'simplify': # orginal impl.
+                # orginal impl.
+                if args.task != 'simplify':
                     print('loading glove embeddings')
                     glove_embeddings = {}
                     with open(args.glove, 'r') as rf:
@@ -388,7 +500,10 @@ class Dataset:
 
                 else: # special handling for simplification
                     # expected glove embedding mapping name should follow form `[tokenizer name]_glove.npy`
-                    embedding_file = Path(args.save_dir) / f"{self.tokenizer.name_or_path.split('/')[-1]}_{args.glove}.npy"
+                    if Path(args.glove).exists() and Path(args.glove).is_file():
+                        embedding_file = Path(args.save_dir) / f"{self.tokenizer.name_or_path.split('/')[-1]}_{Path(args.glove).stem}.npy"
+                    else:
+                        embedding_file = Path(args.save_dir) / f"{self.tokenizer.name_or_path.split('/')[-1]}_{args.glove}.npy"
                     if not embedding_file.is_file():
                         # create a new mapping if not existing for current tokenizer and glove embs
                         self.glove_embeddings = map_tokens_to_glove(self.tokenizer, embedding_file, args.glove)
@@ -427,10 +542,10 @@ class Dataset:
         # if not self.formality and not self.simplify:
         #     print('total words', self.total_words)
         #     print('vocab size', len(self.index2word))
-        
+        # breakpoint()
         
 
-    def shuffle(self, split, seed=None):
+    def shuffle(self, split, seed=SEED):
         assert split in ['train', 'val', 'test']
         if seed is not None:
             random.seed(seed)

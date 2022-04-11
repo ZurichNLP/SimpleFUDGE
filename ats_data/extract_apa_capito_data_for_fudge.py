@@ -27,12 +27,21 @@ However, the effect is relatively mild (~3-7 overlap texts in each split). Can c
 import argparse
 from pathlib import Path
 import pandas as pd
-import nltk
+# import nltk
 from tqdm import tqdm
 import random
-import sklearn
+from sklearn.model_selection import train_test_split
 import string
 import re
+
+
+# compatibility with original tokenization
+# import spacy
+from somajo import SoMaJo
+
+tokenizer = SoMaJo("de_CMC", split_camel_case=True)
+# nlp = spacy.load("de_core_news_lg")
+
 
 def set_args():
     ap = argparse.ArgumentParser()
@@ -42,6 +51,15 @@ def set_args():
     ap.add_argument('--format', required=True, type=str, choices=['sentence', 'paragraph'], default='sentence', help='whether or not to write one sentence per line or retain some sequences of sentences (experimental)')
     return ap.parse_args()
 
+
+def sent_tokenize(paragraphs):
+    out_sents = []
+    sentences = tokenizer.tokenize_text(paragraphs)
+    for sentence in sentences:
+        tokens = ' '.join([token.text for token in sentence])
+        out_sents.append(tokens)
+    return out_sents
+
 def read_articles(filepath):
     """ keeps paragraph structure """
     para_sents = []
@@ -49,7 +67,7 @@ def read_articles(filepath):
         for line in f:
             line = line.strip()
             if line:
-                para_sents += [nltk.sent_tokenize(line)]           
+                para_sents += [sent_tokenize([line])]   
     return para_sents
 
 def read_tsv(filepath):
@@ -209,8 +227,8 @@ def clean_docs(orig_texts, simp_texts):
 
 def shuf_and_split(data):
     random.Random(42).shuffle(data)
-    train_data, test_data = sklearn.model_selection.train_test_split(data, train_size=0.8, test_size=0.2, shuffle=False)
-    test_data, val_data = sklearn.model_selection.train_test_split(test_data, train_size=0.5, test_size=0.5, shuffle=False)
+    train_data, test_data = train_test_split(data, train_size=0.8, test_size=0.2, shuffle=False)
+    test_data, val_data = train_test_split(test_data, train_size=0.5, test_size=0.5, shuffle=False)
     return train_data, val_data, test_data
 
 if __name__ == '__main__':

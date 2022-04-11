@@ -69,7 +69,10 @@ def infer_outfile_name_from_args(args):
     filename += '.txt'
 
     # expected format: outpath/generationmodel/testset/monsterhparamstring
-    outfile = Path(args.outpath) / Path(args.generation_model).parts[-1] / Path(args.condition_model).parts[-1] / Path(args.infile).stem / filename
+    if args.generation_model and args.condition_model:
+        outfile = Path(args.outpath) / Path(args.generation_model).parts[-1] / Path(args.condition_model).parts[-1] / Path(args.infile).stem / filename
+    else:
+        outfile = Path(args.outpath) / Path(args.infile).stem / filename
 
     # breakpoint()
     # create output dir if not exists already 
@@ -93,13 +96,16 @@ def main(args):
     generator_model.eval()
 
     # load fudge conditioning model
-    condition_model_ckpt = Path(args.condition_model) / 'model_best.pth.tar'
-    checkpoint = torch.load(condition_model_ckpt, map_location=args.device)
-    model_args = checkpoint['args']
-    conditioning_model = Model(model_args, tokenizer.pad_token_id, tokenizer.vocab_size)
-    conditioning_model.load_state_dict(checkpoint['state_dict'])
-    conditioning_model = conditioning_model.to(args.device)
-    conditioning_model.eval()
+    if args.condition_model:
+        condition_model_ckpt = Path(args.condition_model) / 'model_best.pth.tar'
+        checkpoint = torch.load(condition_model_ckpt, map_location=args.device)
+        model_args = checkpoint['args']
+        conditioning_model = Model(model_args, tokenizer.pad_token_id, tokenizer.vocab_size)
+        conditioning_model.load_state_dict(checkpoint['state_dict'])
+        conditioning_model = conditioning_model.to(args.device)
+        conditioning_model.eval()
+    else:
+        conditioning_model = None
 
     if args.verbose:
         print("=> loaded checkpoint '{}' (epoch {})"
@@ -107,6 +113,7 @@ def main(args):
         print('num params', num_params(conditioning_model))
 
     outfile = infer_outfile_name_from_args(args)
+    
     
     # breakpoint()
     generated_texts = 0
@@ -135,6 +142,7 @@ def main(args):
     elapsed_time = time.time() - start_time
     print(f'generated {generated_texts} texts in {elapsed_time} seconds')
     print(f'outfile: {outfile}')
+
 
 if __name__=='__main__':
 
