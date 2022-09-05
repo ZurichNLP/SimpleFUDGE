@@ -427,7 +427,7 @@ finetune_bart_large_on_muss_mined() {
 
 }
 
-finetune_bart_large_on_muss_mined_de() {
+finetune_mbart_on_muss_mined_de() {
 
     # adapts above function for de with MBART
 
@@ -482,13 +482,13 @@ finetune_bart_large_on_muss_mined_de() {
 
 }
 
-# nohup bash run_experiments.sh finetune_bart_large_on_supervised_labeled >| newsela_supervised_finetune.log &
-finetune_bart_large_on_supervised_labeled() {
+# nohup bash run_experiments.sh finetune_bart_large_on_supervised_labeled_newsela_manual >| newsela_supervised_finetune.log &
+finetune_bart_large_on_supervised_labeled_newsela_manual() {
 
     GPU="3,4"
 
     input_dir=$SCRATCH/data/en/aligned
-    save_dir=$SCRATCH/supervised
+    save_dir=$SCRATCH/supervised/newsela_manual
     data_dir=$save_dir/data
 
     transformers_dir=$BASE/transformers
@@ -499,7 +499,8 @@ finetune_bart_large_on_supervised_labeled() {
         --data_dir $input_dir \
         --out_dir $data_dir \
         --splits "train" "test" "dev" \
-        --dataset "newsela" --label
+        --dataset "newsela_manual" \
+        --label_src 
     
     echo "Initialising training run on GPU(s): $GPU"
     export CUDA_VISIBLE_DEVICES=$GPU
@@ -532,6 +533,56 @@ finetune_bart_large_on_supervised_labeled() {
 
 }
 
+# nohup bash run_experiments.sh finetune_bart_large_on_supervised_labeled_newsela_auto >| newsela_auto_supervised_finetune.log &
+finetune_bart_large_on_supervised_labeled_newsela_auto() {
+
+    GPU="5,6"
+
+    input_dir=$SCRATCH/data/en/aligned
+    save_dir=$SCRATCH/supervised/newsela_auto
+    data_dir=$save_dir/data
+
+    transformers_dir=$BASE/transformers
+
+    mkdir -p $data_dir
+
+    python convert_line_aligned_to_jsonl.py \
+        --data_dir $input_dir \
+        --out_dir $data_dir \
+        --splits "train" \
+        --dataset "newsela_auto" \
+        --label_src
+    
+    echo "Initialising training run on GPU(s): $GPU"
+    export CUDA_VISIBLE_DEVICES=$GPU
+
+    python $transformers_dir/examples/pytorch/summarization/run_summarization.py \
+        --model_name_or_path "facebook/bart-large" \
+        --output_dir $save_dir/bart --overwrite_output_dir \
+        --train_file $data_dir/train.json \
+        --validation_file $data_dir/dev.json \
+        --test_file $data_dir/test.json \
+        --text_column "complex" \
+        --summary_column "simple" \
+        --max_source_length 256 \
+        --max_target_length 128 \
+        --preprocessing_num_workers 16 \
+        --seed 42 \
+        --overwrite_cache True \
+        --learning_rate 3e-05 --weight_decay 0.01 \
+        --per_device_train_batch_size 8 --gradient_accumulation_steps 4 \
+        --optim adamw_hf --adam_beta1 0.9 --adam_beta2 0.999 --adam_epsilon 1e-8 \
+        --lr_scheduler_type polynomial --warmup_steps 500 \
+        --label_smoothing_factor 0.1 --fp16 \
+        --max_steps 20000 \
+        --evaluation_strategy "steps" \
+        --do_train --do_eval \
+        --do_predict --predict_with_generate --num_beams 4 \
+        --logging_steps 100 --save_steps 100 --save_total_limit 1 \
+        --metric_for_best_model "rouge1" --load_best_model_at_end \
+        --report_to "wandb"
+
+}
 
 ###########
 # HP SEARCH
@@ -581,11 +632,13 @@ hp_search_beam() {
         --generation_model $SCRATCH/fudge/generators/$gen_model \
         --outpath $outdir \
         --data_dir $SCRATCH/data/en/aligned \
-        --datasets newsela_manual_v0_v1_dev newsela_manual_v0_v2_dev newsela_manual_v0_v3_dev newsela_manual_v0_v4_dev \
+        --datasets newsela_manual_v0_v1_dev newsela_manual_v0_v2_dev newsela_manual_v0_v3_dev newsela_manual_v0_v4_dev asset_dev turk_dev wiki_manual_dev \
         --max_lines $max_lines --batch_size 1 \
         --log_to_file
 
     echo "Finished HP sweep. See results in $outdir"
+
+    # --datasets newsela_manual_v0_v1_dev newsela_manual_v0_v2_dev newsela_manual_v0_v3_dev newsela_manual_v0_v4_dev \
 }
 
 hp_search_topk() {
@@ -818,14 +871,17 @@ decode_newsela_level_on_line_parts() {
 
 
 
-# bash run_experiments.sh decode_supervised_labeled 0
+# bash run_experiments.sh decode_supervised_labeled newsela_manual 6
+# bash run_experiments.sh decode_supervised_labeled newsela_auto 6
 decode_supervised_labeled() {
 
+    data=$1 # newsela_auto or newsela_manual
+
     input_dir=$SCRATCH/data/en/aligned
-    exp_dir=$SCRATCH/supervised
+    exp_dir=$SCRATCH/supervised/$data
     outpath=$exp_dir/results
     
-    gpu=$1
+    gpu=$2
     export CUDA_VISIBLE_DEVICES=$gpu
 
     for level in 1 2 3 4; do   
@@ -837,20 +893,20 @@ decode_supervised_labeled() {
             # TODO update $SCRATCH/supervised/checkpoint-500 to best model
             python inference.py \
                 --infile $exp_dir/data/newsela_manual_v0_v${level}_${split}.tsv --outpath $outpath \
-                --generation_model $SCRATCH/supervised/bart1300 \
+                --generation_model $exp_dir/bart_ft_ckpt \
                 --condition_lambda "0" \
                 --batch_size 1 \
                 --num_beams 5 --num_return_sequences 5 \
 
             # constructed outphath has the form:
             # echo "$outpath/$gen_model/$cond_model/newsela_manual_v0_v${level}_${split}"
-            hyp_files=$(find $outpath/newsela_manual_v0_v${level}_${split} -name "lambda$lambda*.txt")
-            for hyp_file in $hyp_files; do
-                echo "Running evaluation on $hyp_file"
-                python simplification_evaluation.py \
-                    --src_file $input_dir/newsela_manual_v0_v${level}_${split}.tsv \
-                    --hyp_file $hyp_file
-            done
+            # hyp_files=$(find $outpath/newsela_manual_v0_v${level}_${split} -name "lambda0*.txt")
+            # for hyp_file in $hyp_files; do
+            #     echo "Running evaluation on $hyp_file"
+            #     python simplification_evaluation.py \
+            #         --src_file $input_dir/newsela_manual_v0_v${level}_${split}.tsv \
+            #         --hyp_file $hyp_file
+            # done
         done
     done
 

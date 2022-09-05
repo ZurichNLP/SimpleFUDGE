@@ -10,7 +10,7 @@ Example call:
     python manual_inspection.py \
     --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v4_test.tsv \
     --muss_outputs /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v4_test_lr0.47_ls0.79_wr0.43_td0.42.pred \
-    --super_outputs /srv/scratch6/kew/ats/supervised/results/newsela_manual_v0_v4_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --super_outputs /srv/scratch6/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v4_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --fudge_outputs /srv/scratch6/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l4_article_paragraphs/newsela_manual_v0_v4_test/lambda5.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
     --outpath /srv/scratch6/kew/ats/data/comparative_scores_all_l4.jsonl
@@ -18,7 +18,7 @@ Example call:
     python manual_inspection.py \
     --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v3_test.tsv \
     --muss_outputs /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v3_test_lr0.52_ls0.85_wr0.45_td0.62.pred \
-    --super_outputs /srv/scratch6/kew/ats/supervised/results/newsela_manual_v0_v3_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --super_outputs /srv/scratch6/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v3_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --fudge_outputs /srv/scratch6/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l3_article_paragraphs/newsela_manual_v0_v3_test/lambda4.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
     --outpath /srv/scratch6/kew/ats/data/comparative_scores_all_l3.jsonl
@@ -26,7 +26,7 @@ Example call:
     python manual_inspection.py \
     --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v2_test.tsv \
     --muss_outputs /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v2_test_lr0.75_ls0.82_wr0.94_td0.22.pred \
-    --super_outputs /srv/scratch6/kew/ats/supervised/results/newsela_manual_v0_v2_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --super_outputs /srv/scratch6/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v2_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --fudge_outputs /srv/scratch6/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l2_article_paragraphs/newsela_manual_v0_v2_test/lambda4.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
     --outpath /srv/scratch6/kew/ats/data/comparative_scores_all_l2.jsonl
@@ -34,7 +34,7 @@ Example call:
     python manual_inspection.py \
     --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v1_test.tsv \
     --muss_outputs /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v1_test_lr0.3_ls0.99_wr0.54_td1.45.pred \
-    --super_outputs /srv/scratch6/kew/ats/supervised/results/newsela_manual_v0_v1_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --super_outputs /srv/scratch6/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v1_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --fudge_outputs /srv/scratch6/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l1_article_paragraphs/newsela_manual_v0_v1_test/lambda1.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
     --outpath /srv/scratch6/kew/ats/data/comparative_scores_all_l1.jsonl
@@ -49,7 +49,7 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 
-from easse import sari, bleu, fkgl
+from easse import sari, bleu, fkgl, bertscore
 
 rand = random.Random(42)
 
@@ -157,6 +157,16 @@ def _score_sents_fkgl(hyp_texts):
         scores[i] = fkgl.corpus_fkgl([hyp_texts[i]])
     return scores
 
+def _score_sents_bertscore(ref_texts, hyp_texts):
+    scores = np.zeros(len(hyp_texts))
+    for i in tqdm(range(len(hyp_texts))):
+        precision_ref, recall_ref, f1_ref = bertscore.corpus_bertscore(
+            [hyp_texts[i]],
+            [[ref_texts[i]]],
+        )
+        scores[i] = f1_ref
+    return scores
+    
 def compute_divergence(data, score):
     
 
@@ -167,6 +177,11 @@ def compute_divergence(data, score):
             muss_scores = _score_sents_bleu(data['tgt_texts'], data['muss_texts'])
         elif score == 'fkgl':
             muss_scores = _score_sents_fkgl(data['muss_texts'])
+        elif score == 'bertscore':
+            breakpoint()
+            muss_scores = _score_sents_bertscore(data['tgt_texts'], data['muss_texts'])
+
+    
 
     if data['fudge_texts'] is not None:
         if score == 'sari':
@@ -175,6 +190,8 @@ def compute_divergence(data, score):
             fudge_scores = _score_sents_bleu(data['tgt_texts'], data['fudge_texts'])
         elif score == 'fkgl':
             fudge_scores = _score_sents_fkgl(data['fudge_texts'])
+        elif score == 'bertscore':
+            fudge_scores = _score_sents_bertscore(data['tgt_texts'], data['fudge_texts'])
 
     if data['super_texts'] is not None:
         if score == 'sari':
@@ -183,6 +200,8 @@ def compute_divergence(data, score):
             super_scores = _score_sents_bleu(data['tgt_texts'], data['super_texts'])
         elif score == 'fkgl':
             super_scores = _score_sents_fkgl(data['super_texts'])
+        elif score == 'bertscore':
+            super_scores = _score_sents_bertscore(data['tgt_texts'], data['super_texts'])
 
     data[f'muss_{score}'] = muss_scores
     data[f'fudge_{score}'] = fudge_scores
@@ -242,6 +261,18 @@ def pretty_print(df, score, max_items=-1):
             print(f"SUPER {row.super_fkgl:.2f}\t: {row.super_texts}")
             print('---')
 
+    if score == 'bertscore':
+        for i, (row_idx, row) in enumerate(df.sort_values('diff_bertscore_muss_fudge').iterrows()):
+            if max_items > 0 and i > max_items:
+                break
+            print(f"Score diff \t: {row.diff_bertscore_muss_fudge:.2f}")
+            print(f"SRC {row_idx}\t\t: {row.src_texts}")
+            print(f"TGT\t\t\t: {row.tgt_texts}")
+            print(f"MUSS {row.muss_bertscore:.2f}\t: {row.muss_texts}")
+            print(f"FUDGE {row.fudge_bertscore:.2f}\t: {row.fudge_texts}")
+            print(f"SUPER {row.super_bertscore:.2f}\t: {row.super_texts}")
+            print('---')
+
     return
 
 if __name__ == "__main__":
@@ -257,7 +288,7 @@ if __name__ == "__main__":
             loop = bool(not input('\nCountinue?\t'))
         sys.exit()
     elif args.score == 'all':
-        for score in ['sari', 'bleu', 'fkgl']:
+        for score in ['sari', 'bleu', 'fkgl', 'bertscore']:
             data = compute_divergence(data, score)    
     else:
         data = compute_divergence(data, args.score)

@@ -6,7 +6,7 @@ Example call:
 
     python simplification_evaluation.py \
         --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v4_test.tsv \
-        --hyp_file /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v4_test_lr0.47_ls0.79_wr0.43_td0.42.pred
+        --hyp_file /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v4_test_lr0.47_ls0.79_wr0.43_td0.42.pred \
         --compute_ppl
 
 """
@@ -97,22 +97,22 @@ def ppl_score(sents):
     """computes ppl score with GPT model"""
     return np.array([distilGPT2_perplexity_score('. '+s) for s in tqdm(sents)])
 
-def ppl_diff(hyp_sents, refs_sents, max_refs_sets=2):
-    refs_ppls = []
-    for ref_sents in refs_sents[:max_refs_sets]:
-        refs_ppls.append(ppl_score(ref_sents))
+# def ppl_diff(hyp_sents, refs_sents, max_refs_sets=2):
+#     refs_ppls = []
+#     for ref_sents in refs_sents[:max_refs_sets]:
+#         refs_ppls.append(ppl_score(ref_sents))
 
-    refs_ppls = np.stack(refs_ppls)
+#     refs_ppls = np.stack(refs_ppls)
 
-    if refs_ppls.ndim == 1:
-        refs_ppls = np.expand_dims(refs_ppls, axis=0)
-    # average over all reference simplifications
-    refs_ppls = refs_ppls.mean(axis=0)
+#     if refs_ppls.ndim == 1:
+#         refs_ppls = np.expand_dims(refs_ppls, axis=0)
+#     # average over all reference simplifications
+#     refs_ppls = refs_ppls.mean(axis=0)
 
-    hyp_ppls = ppl_score(hyp_sents)
+#     hyp_ppls = ppl_score(hyp_sents)
 
-    diff_ppls = refs_ppls - hyp_ppls
-    return diff_ppls.mean()
+#     diff_ppls = refs_ppls - hyp_ppls
+#     return diff_ppls.mean()
 
 
 if __name__ == '__main__':
@@ -135,10 +135,11 @@ if __name__ == '__main__':
     assert len(hyp_sents) == len(src_sents)
 
     results = {'file': args.hyp_file}
-    
-    results['ppl_diff'] = None
+    breakpoint()
+    results['ppl'] = None
     if args.compute_ppl:
-        results['ppl_diff'] = ppl_diff(hyp_sents, refs_sents)
+        # results['ppl_diff'] = ppl_diff(hyp_sents, refs_sents)
+        results['ppl'] = ppl_score(hyp_sents).mean()
 
     # breakpoint()
     if torch.cuda.is_available():

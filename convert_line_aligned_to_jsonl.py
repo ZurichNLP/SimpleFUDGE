@@ -18,7 +18,7 @@ def set_args():
     ap.add_argument('--splits', type=str, nargs='*', default=['train', 'test', 'valid'])
     ap.add_argument('--levels', type=str, nargs='*', default=[1, 2, 3, 4])
     ap.add_argument('--label_src', action="store_true")
-    ap.add_argument('--dataset', type=str, choices=['muss', 'newsela'])
+    ap.add_argument('--dataset', type=str, choices=['muss', 'newsela_manual', 'newsela_auto'])
     return ap.parse_args()
 
 def write_to_json(src_lines, tgt_lines, outfile):
@@ -50,7 +50,7 @@ def convert_newsela_data_to_jsonl(args):
         src_lines = []
         tgt_lines = []
         for level in args.levels:
-            infile = args.data_dir / f'newsela_manual_v0_v{level}_{split}.tsv'
+            infile = args.data_dir / f'{args.dataset}_v0_v{level}_{split}.tsv'
             with open(infile, 'r', encoding='utf8') as inf:
                 for line in inf:
                     src, tgt = line.strip().split('\t')
@@ -63,10 +63,12 @@ def convert_newsela_data_to_jsonl(args):
         assert len(src_lines) == len(tgt_lines)
 
         if split == 'train': # shuffle
-            c = list(zip(src_lines, tgt_lines))
-            random.Random(4).shuffle(c)
+            print(len(src_lines))
+            c = set(zip(src_lines, tgt_lines))
+            random.seed(4)
+            c = random.sample(c, len(c))
             src_lines, tgt_lines = zip(*c)
-
+            print(len(src_lines))
         if args.out_dir is not None:
             write_to_json(src_lines, tgt_lines, args.out_dir / f'{split}.json')
 
@@ -76,7 +78,10 @@ if __name__ == "__main__":
 
     args = set_args()
 
-    if args.dataset == 'newsela':
+    
+    Path(args.out_dir).mkdir(parents=True, exist_ok=True)
+    
+    if args.dataset in ['newsela_manual', 'newsela_auto']:
         convert_newsela_data_to_jsonl(args)
     elif args.dataset == 'muss':
         convert_paraphrase_data_to_jsonl(args)
