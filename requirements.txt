@@ -1,7 +1,7 @@
 accelerate==0.5.1
 datasets==1.17.0
 dataclasses==0.6
-easse==0.2.4
+# easse==0.2.4
 fasttext==0.9.2
 gensim==4.1.2
 jupyter==1.0.0
