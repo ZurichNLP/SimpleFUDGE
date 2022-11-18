@@ -74,7 +74,6 @@ def infer_outfile_name_from_args(args):
     else:
         outfile = Path(args.outpath) / Path(args.infile).stem / filename
 
-    # breakpoint()
     # create output dir if not exists already 
     Path(outfile).parent.mkdir(parents=True, exist_ok=True)
 
@@ -115,7 +114,6 @@ def main(args):
     outfile = infer_outfile_name_from_args(args)
     
     
-    # breakpoint()
     generated_texts = 0
     start_time = time.time()
     with tqdm(total=quick_lc(args.infile)) as pbar:
@@ -127,7 +125,6 @@ def main(args):
                     batch_lines = list(map(preprocess_lines, batch_lines))
                     batch_results = predict_simplicity(generator_model, tokenizer, conditioning_model, batch_lines, args)
 
-                    # breakpoint()
                     generated_texts += len(batch_results)
                     if args.batch_size > 1:
                         raise RuntimeError('[!] batched implementation is bugged! Use batch_size=1')

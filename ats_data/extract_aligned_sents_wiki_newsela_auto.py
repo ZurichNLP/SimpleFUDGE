@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# Author: Tannon Kew
-
 """
+
+Author: Tannon Kew
+
 Example Call:
 
     # newsela-auto
@@ -56,7 +57,7 @@ def parse_newsela_auto_data(args):
     with open(args.infile, 'r', encoding='utf8') as f:
         with open(args.outfile, 'w', encoding='utf8') as outf:
             for line in f:
-                # breakpoint()
+                
                 s1_id, s1, s2_id, s2 = line.strip().split('\t')
                 s1_article_name, s1_level = get_level_from_full_id(s1_id)
                 s2_article_name, s2_level = get_level_from_full_id(s2_id)

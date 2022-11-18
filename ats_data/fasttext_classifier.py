@@ -3,7 +3,7 @@
 
 """
 Script for inspecting quick and dirty classifiers on
-somplification level text classification.
+simplification level text classification.
 
 Script expects :
     - sentences corresponding to a positive class (e.g.
@@ -39,7 +39,6 @@ def preprocess_data(file, class_label, tokenize=False):
     with open(file, 'r', encoding='utf8') as f:
         for line in f:
             if tokenize:
-                # breakpoint()
                 line = ' '.join(tokenizer.encode(line.strip(), add_special_tokens=False))
             else:
                 line = line.strip()

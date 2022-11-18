@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# Author: Tannon Kew
 
 """
+
+Author: Tannon Kew
+
 Example Call:
 
     # newsela
@@ -126,7 +128,7 @@ def parse_newsela_data(args):
         
         csents = dedup_sents(sub_df.csent.tolist())
         if len(set(csents)) != len(csents):
-            breakpoint()
+            raise RuntimeError
         try:
             src = ' '.join(csents)
         except TypeError:

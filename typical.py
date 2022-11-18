@@ -2,10 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import torch
-from torch import Tensor
 from transformers import LogitsWarper
-from typing import List, Optional
-import json
 
 class TypicalLogitsWarper(LogitsWarper):
     """
@@ -18,7 +15,7 @@ class TypicalLogitsWarper(LogitsWarper):
         self.min_tokens_to_keep = min_tokens_to_keep
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
-        # print('running typical')
+
         # calculate entropy
         normalized = torch.nn.functional.log_softmax(scores, dim=-1)
         p = torch.exp(normalized)
@@ -45,7 +42,7 @@ class TypicalLogitsWarper(LogitsWarper):
             1, sorted_indices, sorted_indices_to_remove)
 
         scores = scores.masked_fill(indices_to_remove, self.filter_value)
-        # breakpoint()
+        
         return scores
 
 

@@ -150,10 +150,10 @@ def split_docs_at_problematic_sentences(texts, prob_texts_id):
     for txt_idx in range(len(prob_texts_id)):
         if len(prob_texts_id[txt_idx]):
             prob_text = texts[txt_idx] # get the problematic text that we will truncate
-            # breakpoint()
-            # for s in 
-            if 'Sie wohnen zu Hause.' in prob_text:
-                breakpoint()
+            
+            # # for s in 
+            # if 'Sie wohnen zu Hause.' in prob_text:
+            #     breakpoint()
 
             cur_idx = 0 # init first index as zero
             for sent_idx in prob_texts_id[txt_idx]:

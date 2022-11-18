@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
+
+Author: Tannon Kew
+
 Example call:
 
     python simplification_evaluation.py \
@@ -11,8 +14,6 @@ Example call:
 
 """
 
-
-import sys
 import argparse
 import numpy as np
 from tqdm import tqdm
@@ -29,9 +30,6 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 
 from perplexity import distilGPT2_perplexity_score
 from distinct_n import distinct
-
-# import logging # has no effect of printed warning from loading RoBERTa model in BERTScore
-# logging.basicConfig(level=logging.ERROR)
 
 def set_args():
     parser = argparse.ArgumentParser()
@@ -97,24 +95,6 @@ def ppl_score(sents):
     """computes ppl score with GPT model"""
     return np.array([distilGPT2_perplexity_score('. '+s) for s in tqdm(sents)])
 
-# def ppl_diff(hyp_sents, refs_sents, max_refs_sets=2):
-#     refs_ppls = []
-#     for ref_sents in refs_sents[:max_refs_sets]:
-#         refs_ppls.append(ppl_score(ref_sents))
-
-#     refs_ppls = np.stack(refs_ppls)
-
-#     if refs_ppls.ndim == 1:
-#         refs_ppls = np.expand_dims(refs_ppls, axis=0)
-#     # average over all reference simplifications
-#     refs_ppls = refs_ppls.mean(axis=0)
-
-#     hyp_ppls = ppl_score(hyp_sents)
-
-#     diff_ppls = refs_ppls - hyp_ppls
-#     return diff_ppls.mean()
-
-
 if __name__ == '__main__':
 
     args = set_args()
@@ -135,20 +115,20 @@ if __name__ == '__main__':
     assert len(hyp_sents) == len(src_sents)
 
     results = {'file': args.hyp_file}
-    breakpoint()
+    
     results['ppl'] = None
     if args.compute_ppl:
         # results['ppl_diff'] = ppl_diff(hyp_sents, refs_sents)
         results['ppl'] = ppl_score(hyp_sents).mean()
 
-    # breakpoint()
+    
     if torch.cuda.is_available():
         precision_ref, recall_ref, f1_ref = bertscore.corpus_bertscore(hyp_sents, refs_sents)
         precision_src, recall_src, f1_src = bertscore.corpus_bertscore(hyp_sents, list(map(list, [*zip(*[[s] for s in src_sents])])))
     else:
         precision_ref, recall_ref, f1_ref = None, None, None
         precision_src, recall_src, f1_src = None, None, None
-    # breakpoint()
+    
     results['bleu'] = bleu.corpus_bleu(hyp_sents, refs_sents)
     results['sari'] = sari.corpus_sari(src_sents, hyp_sents, refs_sents, legacy=False)
     results['fkgl'] = fkgl.corpus_fkgl(hyp_sents)

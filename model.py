@@ -56,7 +56,6 @@ class Model(nn.Module):
                 if isinstance(glove_embeddings, str):
                     glove_embeddings = np.load(glove_embeddings)
                 self.bart_embed = nn.Embedding.from_pretrained(torch.from_numpy(glove_embeddings), padding_idx=1)
-            # breakpoint()
             # self.bart_embed
             if 'bidirectional' in args and args.bidirectional:
                 self.rnn = nn.LSTM(EMBED_DIM, HIDDEN_DIM//2, num_layers=3, bidirectional=True, dropout=0.1)

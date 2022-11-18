@@ -3,6 +3,8 @@
 
 """
 
+Author: Tannon Kew
+
 Example call:
 
     compare output sentences by metrics and write to file for inspection
@@ -178,7 +180,6 @@ def compute_divergence(data, score):
         elif score == 'fkgl':
             muss_scores = _score_sents_fkgl(data['muss_texts'])
         elif score == 'bertscore':
-            breakpoint()
             muss_scores = _score_sents_bertscore(data['tgt_texts'], data['muss_texts'])
 
     

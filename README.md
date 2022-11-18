@@ -11,7 +11,7 @@ For this study, we reimplemented FUDGE as a standalone, [custom LogitProcessor](
 This repo is setup as follows:
 
 - `analysis`: contain jupyter notebooks for analysing and plotting results.
-- `ats_data`: scripts for preparing various simplification data sets.
+- `ats_data`: scripts for preparing various simplification data sets, including Newsela as used in this study.
 - `easse_patch`: a single script which can be used to replace one of the original scripts in EASSE.
 - `legacy`: original scripts and files from the [original FUDGE repo](https://github.com/yangkevin2/naacl-2021-fudge-controlled-generation)
 - implementation and experimentation scripts.
@@ -81,8 +81,15 @@ python predict_simplify.py \
     --condition_model <PATH_TO_FUDGE_DISCRIMINATOR> \
     --generation_model <PATH_TO_GENERATION_MODEL> \
     --condition_lambda 5 \
-    --num_beams 1 --num_return_sequences 1 \
+    --num_beams 4 \
+    --num_return_sequences 1 \
     --input_text "Memorial West's class is one of several programs offered through hospitals to help children stay healthy through exercise and proper eating"
+
+# should output something like the following:
+# ***
+# Complex: Memorial West's class is one of several programs offered through hospitals to help children stay healthy through exercise and proper eating
+# Simple: Memorial West's class is one of many programs available through hospitals. It is one of many programs accessible through hospitals to help children stay healthy.
+# ***
 ```
 
 To decode a test set, run:

@@ -1,23 +1,21 @@
-import os
-import random
-import time
-import pickle
-import math
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+
+Author: Tannon Kew
+
+"""
+
 from pathlib import Path
-import pprint
 from argparse import ArgumentParser
 
-from tqdm import tqdm
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModelWithLMHead, AutoModelForSeq2SeqLM, pipeline, set_seed, GPT2Tokenizer, GPT2Model, MarianTokenizer, MarianMTModel
 from transformers import BartForConditionalGeneration, BartTokenizer
 
-from data import Dataset
 from model import Model
-from util import save_checkpoint, ProgressMeter, AverageMeter, num_params
+from util import num_params
 from constants import *
 
 from transformers import (
@@ -40,7 +38,6 @@ def generation_arg_parser(description=None):
 
     # DATA
     parser.add_argument('--condition_model', type=str, required=False, default=None)
-    # parser.add_argument('--dataset_info', type=str, required=False, help='saved dataset info')
     parser.add_argument('--generation_model', type=str, required=True, help='path to finetuned model or huggingface identifier')
     parser.add_argument('--seed', type=int, default=1, help='random seed')
     parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
@@ -143,7 +140,6 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
 
         if args.num_beams > 1: # beam decoding
             
-            # breakpoint()
             # instantiate a BeamSearchScorer
             beam_scorer = BeamSearchScorer(
                 batch_size=batch_size,
@@ -186,12 +182,12 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
 
             else: # regular geedy decoding with FUDGE 
                 # NOTE: should be the same as original implementation
-                # NOTE: greedy decoding fails with min_length_logits_processor!
-                outputs = model.greedy_search(
-                    decoder_input_ids, 
-                    logits_processor=logits_processor,
-                    **model_kwargs
-                    )
+                raise NotImplementedError(f"Greedy search currently not implemented!")
+                # outputs = model.greedy_search(
+                #     decoder_input_ids, 
+                #     logits_processor=logits_processor,
+                #     **model_kwargs
+                #     )
             
         return tokenizer.batch_decode(outputs, skip_special_tokens=True, clean_up_tokenization_spaces=True)
 
@@ -247,11 +243,6 @@ def main(args):
         print('Complex:', in_text)
         print('Simple:', out_text)
         print('***')
-    # print('INPUT:')
-    # pprint.pprint(input_text)
-    # print('>>>')
-    # pprint.pprint(results)
-    # print('***')
 
 if __name__=='__main__':
     

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import torch
-from torch import Tensor
-from transformers import LogitsProcessor
-from typing import List, Optional
 import json
+import torch
+from transformers import LogitsProcessor
 
 class FUDGELogits(LogitsProcessor):
     def __init__(self, tokenizer, conditioning_model, condition_lambda, precondition_topk, batch_size, soft, vectorized=True, analysis_file=None):
@@ -98,7 +96,6 @@ class FUDGELogits(LogitsProcessor):
         :input_ids: shape([num_beams*batch_size, seq_len])
         :scores: shape([num_beams*batch_size, vocab_size])
         """
-        # breakpoint()
         num_beams = input_ids.shape[0]//self.batch_size # infer number of beams
         # get precondition logits and indices in vocabulary
         top_logits, top_indices = scores.topk(self.precondition_topk, dim=-1) # scores.shape([num_beams*batch_size, vocab_size]) 
@@ -123,7 +120,6 @@ class FUDGELogits(LogitsProcessor):
             None, None, None
             )
 
-        # breakpoint()
         condition_logits = condition_logits.view(self.batch_size, self.precondition_topk, -1)[:, :, -1].repeat_interleave(num_beams, dim=0) # shape: [num_beams*batch_size, topk] of last FUDGE pred
         
         condition_logits = condition_logits - torch.log(1 + torch.exp(condition_logits)) # get correct log probs
@@ -147,7 +143,6 @@ class FUDGELogits(LogitsProcessor):
                     'pre_scores': top_logits.tolist(),
                     'post_scores': fudge_logits.tolist(),
                 }
-                # breakpoint()
                 d = json.dumps(d)
                 outf.write(f'{d}\n')
 

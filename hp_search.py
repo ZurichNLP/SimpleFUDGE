@@ -23,11 +23,9 @@ Example Call:
         --max_lines 50
 """
 
-import sys
 from pathlib import Path
 import logging
 import torch
-from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from types import SimpleNamespace
@@ -87,7 +85,6 @@ if __name__ == '__main__':
     condition_model_ckpt = Path(args.condition_model) / 'model_best.pth.tar'
     checkpoint = torch.load(condition_model_ckpt, map_location=args.device)
     model_args = checkpoint['args']
-    # breakpoint()
     conditioning_model = Model(model_args, tokenizer.pad_token_id, tokenizer.vocab_size)
     conditioning_model.load_state_dict(checkpoint['state_dict'])
     conditioning_model = conditioning_model.to(args.device)

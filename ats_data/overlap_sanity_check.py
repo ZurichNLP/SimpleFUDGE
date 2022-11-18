@@ -40,7 +40,7 @@ for level in levels:
     tgt_dev_test_sents = set()
     for split in ['dev', 'test']:
         src, tgt = read_tsv(splits_path / f'apa_capito_{level.lower()}_{split}.tsv')
-        # breakpoint()
+        
         src_dev_test_sents.update(list(map(normalise_text, src)))
         tgt_dev_test_sents.update(list(map(normalise_text, src)))
 
@@ -50,16 +50,14 @@ for level in levels:
     src_train_sents = set(map(normalise_text, chain.from_iterable(src_train_sents)))
     tgt_train_sents = set(map(normalise_text, chain.from_iterable(tgt_train_sents)))
     
-    # for i in dev_test_sents:
-    #     if i in train_texts
     src_ol = src_dev_test_sents.intersection(src_train_sents)
     tgt_ol = tgt_dev_test_sents.intersection(tgt_train_sents)
 
-    # breakpoint()
+    
     if len(src_ol) > 0:
         print(f'[!] Found SRC overlap for {level}')
         print(src_ol)
-        # breakpoint()
+        
     else:
         print(f'No SRC overlap found for {level} :)')
 

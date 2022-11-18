@@ -64,7 +64,7 @@ def map_tokens_to_glove(tokenizer, embedding_file, glove_string, GLOVE_DIM=300):
     holder = np.zeros((tokenizer.vocab_size, GLOVE_DIM), dtype=np.float32) # ensure float 32 for compatibility during training
     # look up glove representations for each token from the generator model's tokenizer
     null_words = set()
-    # breakpoint()
+
     for i in tqdm(range(tokenizer.vocab_size), total=tokenizer.vocab_size):
         try:
             word = tokenizer.decode([i])
@@ -83,7 +83,7 @@ def map_tokens_to_glove(tokenizer, embedding_file, glove_string, GLOVE_DIM=300):
     return holder
 
 def collate(batch):
-    # breakpoint()
+
     pad_id = batch[0][4]
     inputs = [b[0] for b in batch]
     lengths = torch.LongTensor([b[1] for b in batch])
@@ -202,18 +202,17 @@ class Dataset:
                         test.append((line.strip(), label))
             self.splits = {}
             self.splits['train'], self.splits['val'], self.splits['test'] = train, val, test
-            # breakpoint()
+
         ####################
 
         elif self.simplify:
 
-            # breakpoint()
             outpath = Path(args.save_dir) / 'dataset_splts.pkl'
             if outpath.exists():
                 with open(outpath, 'rb') as inf:
                     self.splits = pickle.load(inf)
                     print(f'loaded pre-compiled data splits from {outpath}')
-                    # breakpoint()
+
             ###########
             # WIKIPEDIA
             ###########
@@ -348,7 +347,7 @@ class Dataset:
             elif 'apa_capito' in args.data_dir:
                 
                 self.vocab['placeholder'] = 1 # anything so we don't crash
-                # breakpoint()
+
                 # collect positive samples
                 pos_train, pos_val, pos_test = [], [], []
                 for split in ['train', 'test', 'dev']:
@@ -361,7 +360,6 @@ class Dataset:
                                 line_parts = [line.strip()]
                             
                             for lp in line_parts:
-                                # breakpoint()
                                 if len(self.tokenizer.tokenize(lp)) > self.tokenizer.model_max_length:
                                     continue
                                 if split == 'test':
@@ -463,10 +461,6 @@ class Dataset:
             
                 words_values = list(self.tokenizer.vocab.items())
                 words_values = sorted(words_values, key=lambda x: x[1], reverse=False)
-                # breakpoint()
-                # for word, _ in words_values[self.tokenizer.vocab_size:]: # only use somewhat common tokens
-                    # self.vocab = 
-                    # del self.vocab[word]
                 self.vocab = dict(words_values)
                 self.total_words = len(self.vocab)
                 self.word2index = self.tokenizer.vocab
@@ -539,11 +533,6 @@ class Dataset:
             t_cnt = len(self.splits[split])
             s_cnt = sum(1 for i in self.splits[split] if i[1] == 1)
             print(f"complex / simple instances in {split} of size {t_cnt}: {t_cnt - s_cnt} / {s_cnt}")
-        # if not self.formality and not self.simplify:
-        #     print('total words', self.total_words)
-        #     print('vocab size', len(self.index2word))
-        # breakpoint()
-        
 
     def shuffle(self, split, seed=SEED):
         assert split in ['train', 'val', 'test']
@@ -637,7 +626,7 @@ class SplitLoader(torch.utils.data.IterableDataset):
             #######################
 
             elif self.parent.simplify:
-                # breakpoint()
+
                 future_word_num_syllables, rhyme_group_index, syllables_to_go = -1, -1, -1
                 raw_sentence, classification_label = self.data[self.pos]
                 original_sentence = raw_sentence.split()
