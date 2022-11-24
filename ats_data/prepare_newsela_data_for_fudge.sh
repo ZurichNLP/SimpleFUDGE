@@ -19,39 +19,39 @@ echo ""
 python extract_newsela_data_for_fudge.py \
     --indir $NEWSELA_DIR \
     --outdir $NEWSELA_DIR/article_paragraphs \
-    --meta_data $NEWSELA_DIR/articles_metadata_en_splits.csv \
+    --meta_data newsela_articles_metadata_with_splits \
     --format paragraph 
 
 python extract_newsela_data_for_fudge.py \
     --indir $NEWSELA_DIR \
     --outdir $NEWSELA_DIR/article_sentences \
-    --meta_data $NEWSELA_DIR/articles_metadata_en_splits.csv \
+    --meta_data newsela_articles_metadata_with_splits \
     --format sentence
 
 python extract_newsela_data_for_fudge.py \
     --indir $NEWSELA_DIR \
     --outdir $NEWSELA_DIR/article_para_sents \
-    --meta_data $NEWSELA_DIR/articles_metadata_en_splits.csv \
+    --meta_data newsela_articles_metadata_with_splits \
     --format mixed
 
-# for spanish
-python extract_newsela_data_for_fudge.py \
-    --indir $NEWSELA_DIR \
-    --outdir $NEWSELA_DIR/article_paragraphs_es \
-    --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
-    --format paragraph
+# # for spanish
+# python extract_newsela_data_for_fudge.py \
+#     --indir $NEWSELA_DIR \
+#     --outdir $NEWSELA_DIR/article_paragraphs_es \
+#     --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
+#     --format paragraph
 
-python extract_newsela_data_for_fudge.py \
-    --indir $NEWSELA_DIR \
-    --outdir $NEWSELA_DIR/article_sentences_es \
-    --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
-    --format sentence
+# python extract_newsela_data_for_fudge.py \
+#     --indir $NEWSELA_DIR \
+#     --outdir $NEWSELA_DIR/article_sentences_es \
+#     --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
+#     --format sentence
 
-python extract_newsela_data_for_fudge.py \
-    --indir $NEWSELA_DIR \
-    --outdir $NEWSELA_DIR/article_para_sents_es \
-    --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
-    --format mixed
+# python extract_newsela_data_for_fudge.py \
+#     --indir $NEWSELA_DIR \
+#     --outdir $NEWSELA_DIR/article_para_sents_es \
+#     --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
+#     --format mixed
 
 echo ""
 echo "Succesfully extracted sentences: $NEWSELA_DIR/article_sentences/"

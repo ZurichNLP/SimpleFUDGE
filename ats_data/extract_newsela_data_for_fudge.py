@@ -7,19 +7,19 @@ Example call:
     python extract_newsela_data_for_fudge.py \
         --indir $DATADIR \
         --outdir $DATADIR/article_paragraphs \
-        --meta_data $DATA_DIR/articles_metadata_en_splits.csv \
+        --meta_data newsela_articles_metadata_with_splits.csv \
         --format paragraph 
 
     python extract_newsela_data_for_fudge.py \
         --indir $DATADIR \
         --outdir $DATADIR/article_sentences \
-        --meta_data $DATA_DIR/articles_metadata_en_splits.csv \
+        --meta_data newsela_articles_metadata_with_splits.csv \
         --format sentence 
 
     python extract_newsela_data_for_fudge.py \
         --indir $DATADIR \
         --outdir $DATADIR/article_para_sents \
-        --meta_data $DATA_DIR/articles_metadata_en_splits.csv \
+        --meta_data newsela_articles_metadata_with_splits.csv \
         --format mixed
 
 """

@@ -12,6 +12,8 @@ bash prepare_wiki_data_for_fudge.sh
 
 **Newsela:**
 
+`newsela_articles_metadata_with_splits.csv` contains the Newsela metadata with train/test/validation split information for each article.
+
 ```
 bash prepare_newsela_data_for_fudge.sh
 ```
