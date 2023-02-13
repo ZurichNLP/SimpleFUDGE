@@ -160,5 +160,16 @@ nohup bash run_experiments.sh finetune_bart_large_on_supervised_labeled_newsela_
 ## Citation
 
 ```
-
+@inproceedings{kew-ebling-2022-target,
+    title = "Target-Level Sentence Simplification as Controlled Paraphrasing",
+    author = "Kew, Tannon  and
+      Ebling, Sarah",
+    booktitle = "Proceedings of the Workshop on Text Simplification, Accessibility, and Readability (TSAR-2022)",
+    month = dec,
+    year = "2022",
+    address = "Abu Dhabi, United Arab Emirates (Virtual)",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2022.tsar-1.4",
+    pages = "28--42",
+}
 ```
