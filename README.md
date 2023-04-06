@@ -23,15 +23,33 @@ This repo is setup as follows:
 conda create -n fudge python=3.8.5 -y
 pip install -r requirements.txt
 
+mkdir installs
+cd installs
+# for evaluation
 git clone git@github.com:feralvam/easse.git
 cd easse
+git checkout 462c4c9ecc8a92d3a0aa948c0b76ddb1e82e9ed3
 pip install -e .
+cd ..
+# for inference with MUSS
+git clone git@github.com:tannonk/muss.git
+cd muss
+pip install -e .
+cd ../..
+
+# for customised evaluation, replace the qualisty_estimation.py script in easse with our patch.
+cp easse_patch/quality_estimation.py installs/easse/easse/
 ```
 
 Note, to help us inspect quality estimation outputs, we provide a modified version of EASSE's `quality_estimation.py` which includes the option to not aggregate the computed QE metrics on the corpus level. 
 To make use of this, replace the `quality_estimation.py` in the EASSE package with our version located in `easse_patch/`.
 
-**Note:** Paths are typically hardcoded in the scripts. Before running, adjust these to suit your system.
+**Note:** Many paths are hardcoded in the `ats_data` and `analysis` scripts. 
+Before running, you should adjust these to suit your setup. We recommend making a new directory `resources` (or symlink to a storage dir) for data and models.
+
+```
+mkdir -p resources/data
+```
 
 ## Running paper experiments
 
@@ -46,13 +64,11 @@ For our experiments, we train our FUDGE classifiers on the Newsela Corpus (Xu et
 For the evaluating with aligned sentences, we use the manually aligned splits from Jiang et al. (2020).
 
 ```
-cd ats_data
-
 # prepare training data
-bash prepare_newsela_data_for_fudge.sh
+bash ats_data/prepare_newsela_data_for_fudge.sh
 
 # prepare evaluation (sentence-aligned) data
-bash collect_newsela_wiki_manual_alignments.sh
+bash ats_data/collect_newsela_wiki_manual_alignments.sh sents
 ```
 
 ### FUDGE Discriminator Model Training
