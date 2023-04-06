@@ -8,11 +8,13 @@ Author: Tannon Kew
 Example Call:
 
     # newsela-auto
-    python extract_aligned_sents_wiki_newsela_auto.py --infile /srv/scratch6/kew/ats/data/en/newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv --outfile /srv/scratch6/kew/ats/data/en/aligned/newsela_auto_v0_v4_train.tsv --complex_level 0 --simple_level 4
-    python extract_aligned_sents_wiki_newsela_auto.py --infile /srv/scratch6/kew/ats/data/en/newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv --outfile /srv/scratch6/kew/ats/data/en/aligned/newsela_auto_v0_v3_train.tsv --complex_level 0 --simple_level 3
-    python extract_aligned_sents_wiki_newsela_auto.py --infile /srv/scratch6/kew/ats/data/en/newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv --outfile /srv/scratch6/kew/ats/data/en/aligned/newsela_auto_v0_v2_train.tsv --complex_level 0 --simple_level 2
-    python extract_aligned_sents_wiki_newsela_auto.py --infile /srv/scratch6/kew/ats/data/en/newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv --outfile /srv/scratch6/kew/ats/data/en/aligned/newsela_auto_v0_v1_train.tsv --complex_level 0 --simple_level 1
+    python extract_aligned_sents_wiki_newsela_auto.py --infile /srv/scratch1/kew/ats/data/en/newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv --outfile /srv/scratch1/kew/ats/data/en/aligned/newsela_auto_v0_v4_train.tsv --complex_level 0 --simple_level 4
+    python extract_aligned_sents_wiki_newsela_auto.py --infile /srv/scratch1/kew/ats/data/en/newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv --outfile /srv/scratch1/kew/ats/data/en/aligned/newsela_auto_v0_v3_train.tsv --complex_level 0 --simple_level 3
+    python extract_aligned_sents_wiki_newsela_auto.py --infile /srv/scratch1/kew/ats/data/en/newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv --outfile /srv/scratch1/kew/ats/data/en/aligned/newsela_auto_v0_v2_train.tsv --complex_level 0 --simple_level 2
+    python extract_aligned_sents_wiki_newsela_auto.py --infile /srv/scratch1/kew/ats/data/en/newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv --outfile /srv/scratch1/kew/ats/data/en/aligned/newsela_auto_v0_v1_train.tsv --complex_level 0 --simple_level 1
 
+Note: Newsela-Auto (newsela-auto/all_data/aligned-sentence-pairs-all.tsv) does NOT handle M:N alignments.
+Partial alignments are treated as regular alignments!
 
 """
 

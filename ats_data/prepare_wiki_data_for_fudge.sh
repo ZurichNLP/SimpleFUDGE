@@ -8,7 +8,7 @@
 
 set -e
 
-SCRATCH=/srv/scratch6/kew/ats/data/en/wiki_dumps
+SCRATCH=/srv/scratch1/kew/ats/data/en/wiki_dumps
 
 for LG in simplewiki enwiki
 do

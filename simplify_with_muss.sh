@@ -3,13 +3,15 @@
 
 # Server: rattle
 
-# bash simplify_with_muss.sh --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v4_dev.tsv --out_path /srv/scratch6/kew/ats/muss/outputs --gpu 3
+# bash simplify_with_muss.sh --src_file /srv/scratch1/kew/ats/data/en/aligned/newsela_manual_v0_v4_dev.tsv --out_path /srv/scratch1/kew/ats/muss/outputs --gpu 3
 # python scripts/simplify.py scripts/examples.en --model-name muss_en_wikilarge_mined
 
 
 
 CONDA_INIT=/home/user/kew/anaconda3/etc/profile.d/conda.sh
-MUSS_DIR=/home/user/kew/INSTALLS/muss
+# expects muss to be installed in the `installs`` directory in simple_fudge/
+MUSS_DIR=installs/muss
+
 
 src_file=""
 params_file=""

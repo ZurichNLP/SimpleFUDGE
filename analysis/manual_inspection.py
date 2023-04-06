@@ -10,36 +10,36 @@ Example call:
     compare output sentences by metrics and write to file for inspection
 
     python manual_inspection.py \
-    --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v4_test.tsv \
-    --muss_outputs /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v4_test_lr0.47_ls0.79_wr0.43_td0.42.pred \
-    --super_outputs /srv/scratch6/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v4_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
-    --fudge_outputs /srv/scratch6/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l4_article_paragraphs/newsela_manual_v0_v4_test/lambda5.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --src_file /srv/scratch1/kew/ats/data/en/aligned/newsela_manual_v0_v4_test.tsv \
+    --muss_outputs /srv/scratch1/kew/ats/muss/outputs/newsela_manual_v0_v4_test_lr0.47_ls0.79_wr0.43_td0.42.pred \
+    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v4_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --fudge_outputs /srv/scratch1/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l4_article_paragraphs/newsela_manual_v0_v4_test/lambda5.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
-    --outpath /srv/scratch6/kew/ats/data/comparative_scores_all_l4.jsonl
+    --outpath /srv/scratch1/kew/ats/data/comparative_scores_all_l4.jsonl
 
     python manual_inspection.py \
-    --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v3_test.tsv \
-    --muss_outputs /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v3_test_lr0.52_ls0.85_wr0.45_td0.62.pred \
-    --super_outputs /srv/scratch6/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v3_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
-    --fudge_outputs /srv/scratch6/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l3_article_paragraphs/newsela_manual_v0_v3_test/lambda4.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --src_file /srv/scratch1/kew/ats/data/en/aligned/newsela_manual_v0_v3_test.tsv \
+    --muss_outputs /srv/scratch1/kew/ats/muss/outputs/newsela_manual_v0_v3_test_lr0.52_ls0.85_wr0.45_td0.62.pred \
+    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v3_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --fudge_outputs /srv/scratch1/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l3_article_paragraphs/newsela_manual_v0_v3_test/lambda4.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
-    --outpath /srv/scratch6/kew/ats/data/comparative_scores_all_l3.jsonl
+    --outpath /srv/scratch1/kew/ats/data/comparative_scores_all_l3.jsonl
 
     python manual_inspection.py \
-    --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v2_test.tsv \
-    --muss_outputs /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v2_test_lr0.75_ls0.82_wr0.94_td0.22.pred \
-    --super_outputs /srv/scratch6/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v2_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
-    --fudge_outputs /srv/scratch6/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l2_article_paragraphs/newsela_manual_v0_v2_test/lambda4.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --src_file /srv/scratch1/kew/ats/data/en/aligned/newsela_manual_v0_v2_test.tsv \
+    --muss_outputs /srv/scratch1/kew/ats/muss/outputs/newsela_manual_v0_v2_test_lr0.75_ls0.82_wr0.94_td0.22.pred \
+    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v2_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --fudge_outputs /srv/scratch1/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l2_article_paragraphs/newsela_manual_v0_v2_test/lambda4.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
-    --outpath /srv/scratch6/kew/ats/data/comparative_scores_all_l2.jsonl
+    --outpath /srv/scratch1/kew/ats/data/comparative_scores_all_l2.jsonl
 
     python manual_inspection.py \
-    --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v1_test.tsv \
-    --muss_outputs /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v1_test_lr0.3_ls0.99_wr0.54_td1.45.pred \
-    --super_outputs /srv/scratch6/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v1_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
-    --fudge_outputs /srv/scratch6/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l1_article_paragraphs/newsela_manual_v0_v1_test/lambda1.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --src_file /srv/scratch1/kew/ats/data/en/aligned/newsela_manual_v0_v1_test.tsv \
+    --muss_outputs /srv/scratch1/kew/ats/muss/outputs/newsela_manual_v0_v1_test_lr0.3_ls0.99_wr0.54_td1.45.pred \
+    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v1_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --fudge_outputs /srv/scratch1/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l1_article_paragraphs/newsela_manual_v0_v1_test/lambda1.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
-    --outpath /srv/scratch6/kew/ats/data/comparative_scores_all_l1.jsonl
+    --outpath /srv/scratch1/kew/ats/data/comparative_scores_all_l1.jsonl
 
 """
 

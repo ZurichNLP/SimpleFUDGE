@@ -351,7 +351,6 @@ class Dataset:
                 # collect positive samples
                 pos_train, pos_val, pos_test = [], [], []
                 for split in ['train', 'test', 'dev']:
-                    # /srv/scratch6/kew/ats/data/de/apa_capito/article_paragraphs/train_or-A1.de
                     with open(os.path.join(args.data_dir, f'{split}_or-{args.tgt_level}.simpde'), 'r') as rf:
                         for i, line in enumerate(rf):
                             if args.use_line_parts:

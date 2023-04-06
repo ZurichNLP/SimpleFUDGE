@@ -15,8 +15,8 @@ Considers options for the following params:
 Example Call:
     
     python hp_search.py \
-        --condition_model /srv/scratch6/kew/ats/fudge/discriminators/wiki100M_bart_glove \
-        --generation_model /srv/scratch6/kew/ats/fudge/generators/bart_large_paraNMT_filt_fr \
+        --condition_model resources/fudge/discriminators/wiki100M_bart_glove \
+        --generation_model resources/fudge/generators/bart_large_paraNMT_filt_fr \
         --outpath hp_search_results \
         --do_sample True --top_k 5 \
         --log_to_file \
@@ -54,14 +54,11 @@ def chunker(iterable, batch_size=1):
 if __name__ == '__main__':
 
     parser = generation_arg_parser(description="SimpleFUDGE")
-    
     parser.add_argument('--log_to_file', action='store_true', required=False, help='whether or not to send logs to file `outpath/hp_search.log`. If not, logs are printed to stdout')
     parser.add_argument('--outpath', type=str, default=None, required=True, help='output file for results csv')
     parser.add_argument('--batch_size', type=int, default=1, required=False, help='number of lines to process as a batch for prediction')
     parser.add_argument('--max_lines', type=int, default=-1, required=False, help='number of lines from validation file to process for generation')
-
-    parser.add_argument('--data_dir', type=str, default='/srv/scratch6/kew/ats/data/en/aligned', required=False, help='directory containing aligned test/validation files')
-
+    parser.add_argument('--data_dir', type=str, default='resources/data/en/aligned', required=False, help='directory containing aligned test/validation files')
     parser.add_argument('--datasets', type=str, 
         default=['asset_validation','turk_validation','newsela_manual_v0_v4_dev', 'wiki_manual_dev'], 
         required=False, nargs='*', help='names of test/validation files to run inference on')

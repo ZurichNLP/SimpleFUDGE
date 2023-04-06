@@ -6,8 +6,8 @@
 
 set -e
 # set -x # to log experiment execution
-SCRATCH=/srv/scratch6/kew/ats
 BASE=$(dirname "$(readlink -f "$0")")
+SCRATCH=$BASE/resources
 
 get_seeded_random() {
   seed="$1"
@@ -363,7 +363,7 @@ train_simple_apa_capito_discriminator() {
         --lr 1e-4 \
         --batch_size 32 \
         --epochs 20 \
-        --glove '/srv/scratch6/kew/de_vectors.txt' #\
+        --glove "$SCRATCH/embeddings/de_vectors.txt" #\
         # --wandb simple_fudge
     
     echo "Finished training discrimator"
@@ -446,7 +446,7 @@ finetune_mbart_on_muss_mined_de() {
         --dataset "muss"
 
     python $transformers_dir/examples/pytorch/summarization/run_summarization.py \
-        --model_name_or_path "/srv/scratch6/kew/ats/fudge/generators/mbart/mbart_de_20k" \
+        --model_name_or_path "$SCRATCH/fudge/generators/mbart/mbart_de_20k" \
         --output_dir $save_dir --overwrite_output_dir \
         --train_file $data_dir/train.json \
         --validation_file $data_dir/valid.json \

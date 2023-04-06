@@ -8,12 +8,12 @@ tsv files containing simplified text data.
 Example Call:
 
     python estimate_text_lengths.py \
-        /srv/scratch6/kew/ats/data/en/aligned/newsela_v0_V1.tsv \
-        /srv/scratch6/kew/ats/data/en/aligned/newsela_v0_V2.tsv \
-        /srv/scratch6/kew/ats/data/en/aligned/newsela_v0_V3.tsv \
-        /srv/scratch6/kew/ats/data/en/aligned/newsela_v0_V4.tsv \
-        /srv/scratch6/kew/ats/data/en/aligned/turk_test.tsv \
-        /srv/scratch6/kew/ats/data/en/aligned/turk_validation.tsv
+        /srv/scratch1/kew/ats/data/en/aligned/newsela_v0_V1.tsv \
+        /srv/scratch1/kew/ats/data/en/aligned/newsela_v0_V2.tsv \
+        /srv/scratch1/kew/ats/data/en/aligned/newsela_v0_V3.tsv \
+        /srv/scratch1/kew/ats/data/en/aligned/newsela_v0_V4.tsv \
+        /srv/scratch1/kew/ats/data/en/aligned/turk_test.tsv \
+        /srv/scratch1/kew/ats/data/en/aligned/turk_validation.tsv
 """
 
 

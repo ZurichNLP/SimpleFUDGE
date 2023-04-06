@@ -5,9 +5,9 @@
 Example Call:
 
     python inference.py \
-        --condition_model /srv/scratch6/kew/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar \
-        --generation_model /srv/scratch6/kew/ats/fudge/generators/bart_large_paraNMT_filt_fr/ \
-        --infile /srv/scratch6/kew/ats/data/en/aligned/turk_test.tsv \
+        --condition_model resources/fudge/ckpt/simplify/simplify_l4_v3/model_best.pth.tar \
+        --generation_model resources/fudge/generators/bart_large_paraNMT_filt_fr/ \
+        --infile resources/data/en/aligned/turk_test.tsv \
         --batch_size 10 --condition_lambda 0
 
 """
@@ -147,7 +147,7 @@ if __name__=='__main__':
     
     # add evaluation specific arguments
     parser.add_argument('--infile', type=str, default=None, required=True, help='file containing text to run pred on')
-    parser.add_argument('--outpath', type=str, default='/srv/scratch6/kew/ats/fudge/results', required=False, help='file to write generated outputs to')
+    parser.add_argument('--outpath', type=str, default='resources/fudge/results', required=False, help='file to write generated outputs to')
     parser.add_argument('--batch_size', type=int, default=1, required=False, help='number of lines to process as a batch for prediction')
     
     args = parser.parse_args()

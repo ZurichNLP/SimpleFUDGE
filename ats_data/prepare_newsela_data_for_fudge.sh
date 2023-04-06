@@ -3,7 +3,10 @@
 
 set -e
 
-DATA_DIR=/srv/scratch6/kew/ats/data
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+BASE=$SCRIPT_DIR/../
+
+DATA_DIR=resources/data
 NEWSELA_DIR=$DATA_DIR/en/newsela_article_corpus_2016-01-29
 
 # collect split information according to newsela manual

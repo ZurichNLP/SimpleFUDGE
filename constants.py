@@ -1,16 +1,8 @@
 PAD_TOKEN = '[PAD]'
 EOT_TOKEN = '<|endoftext|>'
-# SEP = 50256 # just use the weird eot token
 
 TOPIC_MODEL_STRING = 'gpt2-medium'
 FORMALITY_MODEL_STRING = 'Helsinki-NLP/opus-mt-es-en'
-# SIMPLIFY_MODEL_STRING = 'facebook/bart-large' # swapping out marianMT for bart
-# SIMPLIFY_MODEL_STRING = '/srv/scratch6/kew/paraphrase/models/bart-paraphrase'
-# SIMPLIFY_MODEL_STRING = '/srv/scratch6/kew/paraphrase/models/paraNMT_filtered'
-# SIMPLIFY_MODEL_STRING = '/srv/scratch6/kew/paraphrase/models/bart_base_paraNMT_filt_fr/best_model'
-# SIMPLIFY_MODEL_STRING = '/srv/scratch6/kew/paraphrase/models/bart_large_paraNMT_filt_fr/best_model'
-
-
 
 DIR_END_SPLIT_POSITIONS = 32
 
@@ -20,8 +12,6 @@ VOCAB_SIZE = 50000
 
 FORMALITY_MAX_LEN = 200
 
-# GLOVE_STRING = "glove-wiki-gigaword-300"
-# GLOVE_EMBS = '/srv/scratch6/kew/glove/glove.840B.300d.zip'
 GLOVE_PRINT_PROGRESS_FREQ = 1000000
 GLOVE_DIM = 300 #300
 EMBED_DIM = 300

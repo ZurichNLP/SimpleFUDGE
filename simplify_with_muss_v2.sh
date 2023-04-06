@@ -6,10 +6,11 @@
 
 
 CONDA_INIT=/home/user/kew/anaconda3/etc/profile.d/conda.sh
-MUSS_DIR=/home/user/kew/INSTALLS/muss
+# expects muss to be installed in the `installs`` directory in simple_fudge/
+MUSS_DIR=installs/muss
 
-src_data=/srv/scratch6/kew/ats/data/en/aligned/
-out_data=/srv/scratch6/kew/ats/muss/outputs/
+src_data=resources/data/en/aligned/
+out_data=resources/muss/outputs/
 gpu=$1
 
 # setup env

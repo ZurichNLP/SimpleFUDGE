@@ -5,7 +5,7 @@
 Gathers simplification test data for experiments.
 
 Example call:
-    python aggregate_test_data.py --outpath /srv/scratch6/kew/ats/data/en/aligned/
+    python aggregate_test_data.py --outpath /srv/scratch1/kew/ats/data/en/aligned/
     
 """
 
@@ -20,10 +20,10 @@ SEED = 23
 
 def set_args():
     ap = argparse.ArgumentParser()
-    ap.add_argument('-o', '--outpath', type=str, required=False, default='/srv/scratch6/kew/ats/data/en/aligned/', help='path to directory to save validation and test sets')
+    ap.add_argument('-o', '--outpath', type=str, required=False, default='/srv/scratch1/kew/ats/data/en/aligned/', help='path to directory to save validation and test sets')
     ap.add_argument('--datasets', type=str, nargs='+', required=False, default=['turk', 'asset'])
-    # ap.add_argument('--newsela_path', default='/srv/scratch6/kew/ats/data/en/newsela_article_corpus_2016-01-29/newsela_data_share-20150302/', help='path to newsela_data_share directory containing newsela_articles_*.aligned.sents.txt.')
-    # ap.add_argument('--wiki_auto_path', default='/srv/scratch6/kew/ats/data/en/wiki-auto', help='path to directory containing contents of https://github.com/chaojiang06/wiki-auto')
+    # ap.add_argument('--newsela_path', default='/srv/scratch1/kew/ats/data/en/newsela_article_corpus_2016-01-29/newsela_data_share-20150302/', help='path to newsela_data_share directory containing newsela_articles_*.aligned.sents.txt.')
+    # ap.add_argument('--wiki_auto_path', default='/srv/scratch1/kew/ats/data/en/wiki-auto', help='path to directory containing contents of https://github.com/chaojiang06/wiki-auto')
     return ap.parse_args()
 
 

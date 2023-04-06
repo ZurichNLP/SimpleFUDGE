@@ -5,10 +5,10 @@
 Example call:
 
     # sentence level
-    python extract_apa_capito_data_for_fudge.py --in_dir /srv/scratch6/kew/ats/data/de/apa_capito/ --splits /srv/scratch6/kew/ats/data/de/aligned --format sentence
+    python extract_apa_capito_data_for_fudge.py --in_dir /srv/scratch1/kew/ats/data/de/apa_capito/ --splits /srv/scratch1/kew/ats/data/de/aligned --format sentence
 
     # doc / paragraph level
-    python extract_apa_capito_data_for_fudge.py --in_dir /srv/scratch6/kew/ats/data/de/apa_capito/ --splits /srv/scratch6/kew/ats/data/de/aligned --format paragraph
+    python extract_apa_capito_data_for_fudge.py --in_dir /srv/scratch1/kew/ats/data/de/apa_capito/ --splits /srv/scratch1/kew/ats/data/de/aligned --format paragraph
 
 NOTE: This does not guarantee that there is absolutely no overlap between splits due to slight differences in tokenization.
 

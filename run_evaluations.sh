@@ -3,14 +3,16 @@
 
 # Wraps call to simplification evaluation for all relevant outputs in one script, e.g.
 # python simplification_evaluation.py \
-#     --src_file /srv/scratch6/kew/ats/data/en/aligned/newsela_manual_v0_v1_dev.tsv \
-#     --hyp_file /srv/scratch6/kew/ats/muss/outputs/newsela_manual_v0_v1_dev*.pred
+#     --src_file resources/data/en/aligned/newsela_manual_v0_v1_dev.tsv \
+#     --hyp_file resources/muss/outputs/newsela_manual_v0_v1_dev*.pred
 
+BASE=$(dirname "$(readlink -f "$0")")
+SCRATCH=$BASE/resources
 
-src_files=/srv/scratch6/kew/ats/data/en/aligned
-muss_outputs=/srv/scratch6/kew/ats/muss/outputs
-super_outputs=/srv/scratch6/kew/ats/supervised
-fudge_outputs=/srv/scratch6/kew/ats/fudge/results/bart_large_muss_mined_en
+src_files=$SCRATCH/data/en/aligned
+muss_outputs=$SCRATCH/muss/outputs
+super_outputs=$SCRATCH/supervised
+fudge_outputs=$SCRATCH/fudge/results/bart_large_muss_mined_en
 # outfile=${1:"results.csv"}
 
 # init results as header from evaldataframe

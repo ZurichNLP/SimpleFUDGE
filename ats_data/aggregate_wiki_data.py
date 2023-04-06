@@ -13,9 +13,9 @@ Sentences are scred with FKGL score for filtering.
 Example Call:
 
     python aggregate_wiki_data.py \
-        /srv/scratch6/kew/ats/data/en/wiki_dumps/enwiki/enwiki_sents.txt \
-        /srv/scratch6/kew/ats/data/en/wiki_dumps/simplewiki/simplewiki_sents.txt \
-        /srv/scratch6/kew/ats/data/en/wiki_dumps/enwiki_simplewiki.csv
+        /srv/scratch1/kew/ats/data/en/wiki_dumps/enwiki/enwiki_sents.txt \
+        /srv/scratch1/kew/ats/data/en/wiki_dumps/simplewiki/simplewiki_sents.txt \
+        /srv/scratch1/kew/ats/data/en/wiki_dumps/enwiki_simplewiki.csv
 
 """
 

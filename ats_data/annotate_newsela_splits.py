@@ -19,14 +19,14 @@ header:
 
 Example call:
 
-    python annotate_newsela_splits.py /srv/scratch6/kew/ats/data/en/newsela_article_corpus_2016-01-29
+    python annotate_newsela_splits.py /srv/scratch1/kew/ats/data/en/newsela_article_corpus_2016-01-29
 """
 
 import sys
 from pathlib import Path
 import pandas as pd
 
-newsela_manual_dev_article_titles = [
+newsela_manual_dev_article_slugs = [
     'marktwain-newspaper',
     'asian-modelminority',
     'return-trip',
@@ -34,7 +34,7 @@ newsela_manual_dev_article_titles = [
     'emergencyresponse-robots',
 ]
 
-newsela_manual_test_article_titles = [
+newsela_manual_test_article_slugs = [
     'chinook-recognition',
     'auschwitz-palestine',
     'eggprices-rising',
@@ -47,7 +47,7 @@ newsela_manual_test_article_titles = [
     'dinosaur-colors',
 ]
 
-newsela_manual_train_article_titles = [
+newsela_manual_train_article_slugs = [
     'miami-searise',
     'muslim-challenges',
     'doodler-nebraskalawmaker',
@@ -126,9 +126,9 @@ def assign_splits_randomly(df, outfile, TEST_SIZE=10, VALID_SIZE=5):
 def assign_splits_from_newsela_manual(df, outfile):
 
     def lookup(slug):
-        if slug in newsela_manual_test_article_titles:
+        if slug in newsela_manual_test_article_slugs:
             return 'test'
-        elif slug in newsela_manual_dev_article_titles:
+        elif slug in newsela_manual_dev_article_slugs:
             return 'valid'
         else:
             return 'train'

@@ -22,13 +22,13 @@ from itertools import chain
 
 from extract_apa_capito_data_for_fudge import read_articles, read_tsv
 
-splits_path = Path('/srv/scratch6/kew/ats/data/de/aligned') #sys.argv[1] # /srv/scratch6/kew/ats/data/de/aligned/apa_capito_a1_dev.tsv
-sents_path = Path('/srv/scratch6/kew/ats/data/de/apa_capito/article_sentences')
-# sents_path = Path('/srv/scratch6/kew/ats/data/de/apa_capito/article_paragraphs')
+splits_path = Path('/srv/scratch1/kew/ats/data/de/aligned') #sys.argv[1] # /srv/scratch1/kew/ats/data/de/aligned/apa_capito_a1_dev.tsv
+sents_path = Path('/srv/scratch1/kew/ats/data/de/apa_capito/article_sentences')
+# sents_path = Path('/srv/scratch1/kew/ats/data/de/apa_capito/article_paragraphs')
 
 levels = ['A1', 'A2', 'B1']
 
-# tokenizer = MBartTokenizer.from_pretrained('/srv/scratch6/kew/ats/fudge/generators/mbart/longmbart_model_w512_20k')
+# tokenizer = MBartTokenizer.from_pretrained('/srv/scratch1/kew/ats/fudge/generators/mbart/longmbart_model_w512_20k')
 
 def normalise_text(text):
     return re.sub('\s+', '', text.lower())

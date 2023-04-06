@@ -10,7 +10,7 @@ set -e
 
 lang="de"
 LG="dewiki"
-SCRATCH=/srv/scratch6/kew/ats/data/$lang/wiki_dumps
+SCRATCH=/srv/scratch1/kew/ats/data/$lang/wiki_dumps
 
 DATA_DIR=$SCRATCH/$LG
 WIKI_DUMP=${LG}-latest-pages-articles.xml.bz2
