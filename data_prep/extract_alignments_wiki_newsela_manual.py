@@ -9,19 +9,19 @@ Author: Tannon Kew
 Example Call:
 
     # newsela-manual parallel version sentences
-    python ats_data/extract_alignments_wiki_newsela_manual.py \
+    python data_prep/extract_alignments_wiki_newsela_manual.py \
         --infile resources/data/en/newsela-auto/newsela-manual/all/test.tsv \
         --corpus_dir resources/data/en/newsela_article_corpus_2016-01-29/ \
-        --output_dir resources/data/en/aligned/newsela-manual_paras \
+        --output_dir resources/data/en/aligned/newsela-manual_sents \
         --complex_level 0 \
         --simple_level 4 \
         --unit sent
 
     # newsela-manual parallel reading grade level sentences
-    python ats_data/extract_aligned_paras_wiki_newsela_manual.py \
+    python data_prep/extract_aligned_paras_wiki_newsela_manual.py \
         --infile resources/data/en/newsela-auto/newsela-manual/all/test.tsv \
         --corpus_dir resources/data/en/newsela_article_corpus_2016-01-29/ \
-        --output_dir resources/data/en/aligned/newsela-manual_paras \
+        --output_dir resources/data/en/aligned/newsela-manual_sents \
         --complex_level 12 \
         --simple_level 3 \
         --unit sent \
@@ -267,35 +267,38 @@ def infer_output_filepath(args):
 
     `newsela-manual_v0-v4_test.tsv` if `--infile newsela-manual/all/test.tsv --complex_level 0 --simple_level 4`
     """
-    
-    output_file = ''
+
+    # infer sub dir for output files based on dataset and unit    
+    dir_name = ''
     
     if 'newsela-manual' in args.infile:
-        output_file += 'newsela-manual'
+        dir_name += 'newsela-manual'
     elif 'wiki-manual' in args.infile:
-        output_file += 'wiki-manual'
+        dir_name += 'wiki-manual'
     else:
         raise RuntimeError(f'Could not infer output file name from {infile}')
     
     if args.unit in ['s', 'sent', 'sentence', 'sentences']:
-        output_file += '_sent'
+        dir_name += '_sents'
     elif args.unit in ['p', 'para', 'paragraph', 'paragraphs']:
-        output_file += '_para'
+        dir_name += '_paras'
     elif args.unit in ['d', 'doc', 'document', 'documents']:
-        output_file += '_doc'
+        dir_name += '_docs'
     else:
         raise RuntimeError(f'Unknown unit {args.unit}')
 
+    # infer output file name based on complex-simple version/level and split
     if args.grade_level:
-        output_file += f'_l{args.complex_level}-l{args.simple_level}'
+        output_file += f'l{args.complex_level}-l{args.simple_level}'
     else:
-        output_file += f'_v{args.complex_level}-v{args.simple_level}'
+        output_file += f'v{args.complex_level}-v{args.simple_level}'
 
     split = Path(args.infile).stem
 
     output_file += f'_{split}.tsv'
 
-    output_filepath = Path(args.output_dir) / output_file
+    # build output file path
+    output_filepath = Path(args.output_dir) / dir_name / output_file
     
     return output_filepath
 
@@ -456,7 +459,7 @@ if __name__ == '__main__':
             raise NotImplementedError(
                 'Wiki alignments not yet implemented.' \
                 'Use older version of this script ' \
-                '(simple_fudge/ats_data/extract_aligned_sents_wiki_newsela_manual.py)'
+                '(simple_fudge/data_prep/extract_aligned_sents_wiki_newsela_manual.py)'
             )
             aligned_paras = extract_alignments_from_wiki(args)
         else:

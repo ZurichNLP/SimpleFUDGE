@@ -4,7 +4,7 @@
 # This script extracts aligned sentences from the Newsela and Wiki corpora (wiki not yet tested)
 
 # Usage:
-# bash ats_data/collect_newsela_wiki_manual_alignments.sh [alignment_unit]
+# bash data_prep/collect_newsela_wiki_manual_alignments.sh [alignment_unit]
 
 # Updated: 2023-04-06
 # - support extracting aligned units other than sentences (e.g. paragraphs, docs)
@@ -24,7 +24,7 @@ for split in train test dev; do
     echo "$split"
     for version in 1 2 3 4; do
         echo "0 - $version"
-        python ats_data/extract_alignments_wiki_newsela_manual.py \
+        python data_prep/extract_alignments_wiki_newsela_manual.py \
         --infile resources/data/en/newsela-auto/newsela-manual/all/$split.tsv \
         --corpus_dir resources/data/en/newsela_article_corpus_2016-01-29/ \
         --output_dir resources/data/en/aligned/ \
@@ -40,7 +40,7 @@ for split in train test dev; do
     for complex_grade in 12 11 10 9 8 7 6 5 4 3 2; do
         for simple_grade in 1 2 3 4 5 6 7 8 9 10 11; do
             echo "${complex_grade} - ${simple_grade}"
-            python ats_data/extract_alignments_wiki_newsela_manual.py \
+            python data_prep/extract_alignments_wiki_newsela_manual.py \
                 --infile resources/data/en/newsela-auto/newsela-manual/all/$split.tsv \
                 --output_dir resources/data/en/aligned/ \
                 --corpus_dir resources/data/en/newsela_article_corpus_2016-01-29/ \

@@ -30,7 +30,7 @@ Example Call:
         --outfile /srv/scratch1/kew/ats/data/en/aligned/newsela_manual_12_3_test.tsv \
         --complex_level 12 \
         --simple_level 3 \
-        --metadata_file ats_data/newsela_articles_metadata_with_splits.csv \
+        --metadata_file data_prep/newsela_articles_metadata_with_splits.csv \
         --grade_level
 
 

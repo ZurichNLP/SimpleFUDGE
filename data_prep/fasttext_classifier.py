@@ -17,7 +17,7 @@ NOTE: model training and eval takes only a couple of
 seconds, so we do not save the model files.
 
 Example Call (positive class = 3, negative classes = 0, 1, 2):
-    python ats_data/fasttext_classifier.py 3 0 1 2
+    python data_prep/fasttext_classifier.py 3 0 1 2
 """
 
 import sys
