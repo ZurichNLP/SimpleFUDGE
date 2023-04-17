@@ -176,6 +176,7 @@ def get_doc_text(ids: List, corpus_dir: str, verbose: bool = False) -> str:
             # replace newlines with paragraph tags
             doc = '<p>' + doc
             doc = re.sub(r'\n+', '</p><p>', doc)
+            doc = doc + '</p>'
         # update seen files store so we don't read the same file twice
         seen_files.add(filename)
 
@@ -241,14 +242,14 @@ def get_texts(
     """
     Fetches sentences, paragraphs, or documents from the Newsela corpus according to the IDs provided.
     """
-    if args.unit in ['s', 'sent', 'sentence', 'sentences']:
+    if args.unit in ['s', 'sent', 'sents', 'sentence', 'sentences']:
         c_text, s_text = get_sent_texts(cids, sids, df, verbose=args.verbose)
         
-    elif args.unit in ['p', 'para', 'paragraph', 'paragraphs']:
+    elif args.unit in ['p', 'para', 'paras', 'paragraph', 'paragraphs']:
         c_text = get_para_text(cids, args.corpus_dir, verbose=args.verbose)
         s_text = get_para_text(sids, args.corpus_dir, verbose=args.verbose)
     
-    elif args.unit in ['d', 'doc', 'document', 'documents']:
+    elif args.unit in ['d', 'doc', 'docs', 'document', 'documents']:
         c_text = get_doc_text(cids, args.corpus_dir, verbose=args.verbose)
         s_text = get_doc_text(sids, args.corpus_dir, verbose=args.verbose)
     
@@ -268,35 +269,34 @@ def infer_output_filepath(args):
     `newsela-manual_v0-v4_test.tsv` if `--infile newsela-manual/all/test.tsv --complex_level 0 --simple_level 4`
     """
 
-    # infer sub dir for output files based on dataset and unit    
+    # infer sub dir for output files based on dataset, unit and grade vs level
     dir_name = ''
     
     if 'newsela-manual' in args.infile:
-        dir_name += 'newsela-manual'
+        dir_name += 'newsela_manual'
     elif 'wiki-manual' in args.infile:
-        dir_name += 'wiki-manual'
+        dir_name += 'wiki_manual'
     else:
-        raise RuntimeError(f'Could not infer output file name from {infile}')
+        raise RuntimeError(f'Could not infer output file name from {args.infile}')
     
-    if args.unit in ['s', 'sent', 'sentence', 'sentences']:
+    if args.unit in ['s', 'sent', 'sents', 'sentence', 'sentences']:
         dir_name += '_sents'
-    elif args.unit in ['p', 'para', 'paragraph', 'paragraphs']:
+    elif args.unit in ['p', 'para', 'paras', 'paragraph', 'paragraphs']:
         dir_name += '_paras'
-    elif args.unit in ['d', 'doc', 'document', 'documents']:
+    elif args.unit in ['d', 'doc', 'docs', 'document', 'documents']:
         dir_name += '_docs'
     else:
         raise RuntimeError(f'Unknown unit {args.unit}')
 
     # infer output file name based on complex-simple version/level and split
     if args.grade_level:
-        output_file += f'l{args.complex_level}-l{args.simple_level}'
+        dir_name += '_level'
     else:
-        output_file += f'v{args.complex_level}-v{args.simple_level}'
-
+        dir_name += '_version'
+    
     split = Path(args.infile).stem
-
-    output_file += f'_{split}.tsv'
-
+    output_file = f'{args.complex_level}-{args.simple_level}_{split}.tsv'
+            
     # build output file path
     output_filepath = Path(args.output_dir) / dir_name / output_file
     

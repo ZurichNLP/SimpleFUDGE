@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+# Depraecated. Use extract_newsela_data.py for the latest version.
+
 """
 Example call:
 

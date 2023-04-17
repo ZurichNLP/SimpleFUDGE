@@ -189,3 +189,11 @@ nohup bash run_experiments.sh finetune_bart_large_on_supervised_labeled_newsela_
     pages = "28--42",
 }
 ```
+
+
+### Updates
+
+
+2023-04-13: Installing `evaluate==0.4.0` replaced `datasets==1.17.0` with `datasets==2.11.0`
+torch==1.7.0 --> torch==2.0.0
+Replaced protobuf==4.22.1 with protobuf==3.20.0
