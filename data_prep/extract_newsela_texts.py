@@ -2,17 +2,21 @@
 # -*- coding: utf-8 -*-
 
 """
+
+Extracts all text units from Newsela corpus and writes them to a single file per split and grade/version level.
+Units can be sentences, paragraphs or a mix of both (experimental).
+
 Example call:
 
-    python extract_newsela_data.py \
+    python extract_newsela_texts.py \
         --corpus_dir $DATADIR \
         --unit paragraph 
 
-    python extract_newsela_data.py \
+    python extract_newsela_texts.py \
         --corpus_dir $DATADIR \
         --unit sentence 
 
-    python extract_newsela_data.py \
+    python extract_newsela_texts.py \
         --corpus_dir $DATADIR \
         --unit para_sent
 

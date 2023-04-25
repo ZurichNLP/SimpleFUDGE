@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # -*- coding: utf-8 -*-
 
+# Similar to simplify_with_muss.sh, but uses the parameters saved from the HP search
 # Server: rattle
 # bash simplify_with_muss_v2.sh 3
 

@@ -9,23 +9,33 @@ Author: Tannon Kew
 Example Call:
 
     # newsela-manual parallel version sentences
-    python data_prep/extract_alignments_newsela_manual.py \
+    python data_prep/extract_alignments_newsela.py \
         --infile resources/data/en/newsela-auto/newsela-manual/all/test.tsv \
         --corpus_dir resources/data/en/newsela_article_corpus_2016-01-29/ \
-        --output_dir resources/data/en/aligned/newsela-manual_sents \
+        --output_dir resources/data/en/aligned \
         --complex_level 0 \
         --simple_level 4 \
         --unit sent
 
     # newsela-manual parallel reading grade level sentences
-    python data_prep/extract_alignments_newsela_manual.py \
+    python data_prep/extract_alignments_newsela.py \
         --infile resources/data/en/newsela-auto/newsela-manual/all/test.tsv \
         --corpus_dir resources/data/en/newsela_article_corpus_2016-01-29/ \
-        --output_dir resources/data/en/aligned/newsela-manual_sents \
+        --output_dir resources/data/en/aligned \
         --complex_level 12 \
         --simple_level 3 \
         --unit sent \
         --grade_level
+
+    # newsela-auto parallel version sentences
+    python data_prep/extract_alignments_newsela.py \
+        --infile resources/data/en/newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv \
+        --corpus_dir resources/data/en/newsela_article_corpus_2016-01-29/ \
+        --output_dir resources/data/en/aligned \
+        --complex_level 0 \
+        --simple_level 4 \
+        --unit sent
+        
 
 
 Notes: https://github.com/chaojiang06/wiki-auto/tree/master/wiki-manual
@@ -46,6 +56,7 @@ import re
 from typing import List, Optional, Tuple
 import csv
 from tqdm import tqdm
+tqdm.pandas()
 import logging
 import pandas as pd
 
@@ -62,10 +73,8 @@ def set_args():
     parser.add_argument('--complex_level', type=int, required=False, default=0, help='')
     parser.add_argument('--simple_level', type=int, required=False, default=4, help='')
     parser.add_argument('--verbose', action='store_true', required=False, help='')
-    parser.add_argument('--debug', action='store_true', required=False, help='')
-    parser.add_argument('--wiki', action='store_true', required=False, help='')
-    parser.add_argument('--grade_level', action='store_true', required=False, help='')
-    parser.add_argument('--unit', type=str, default='sentence', required=False, help='')
+    parser.add_argument('--grade_level', action='store_true', required=False, help='If set, extract alignments for grade level sentences, otherwise, extract alignments for parallel versions.')
+    parser.add_argument('--unit', type=str, default='sentence', required=False, help='Unit to extract alignments for. Options: sentence, paragraph, document')
     parser.add_argument('--corpus_dir', type=str, default="resources/data/en/newsela_article_corpus_2016-01-29", required=False, help='')
     return parser.parse_args()
 
@@ -152,6 +161,26 @@ def dedup_sents(lst: List) -> List:
     no_dupes = []
     [no_dupes.append(elem) for elem in lst if not no_dupes.count(elem)]    
     return no_dupes
+
+def dedup_paragraphs(alignments):
+    """
+    Deduplicate alignments at the paragraph level.
+    Compares the first element of each tuple in the list of alignments and keeps only the one with the longest second element.    
+    """
+    
+    deduped_alignments = []
+    # Sort the list of tuples by the first element (ascending) and by the length of the second element (descending)
+    alignments.sort(key=lambda x: (x[0], -len(x[1])))
+    # Alternatively, could also sort by the first element (ascending) and by the absolute difference in length of the second element (ascending)
+    # alignments.sort(key=lambda x: (x[0], abs(len(x[1]) - len(x[0]))))
+
+    # Iterate through the sorted list of tuples
+    for i, t in enumerate(alignments):
+        # If it's the first tuple in the list OR if the first element of the current tuple is different
+        # from the first element of the previous tuple, append the tuple to the result list.
+        if i == 0 or t[0] != alignments[i - 1][0]:
+            deduped_alignments.append(t)
+    return deduped_alignments
 
 def get_doc_text(ids: List, corpus_dir: str, verbose: bool = False) -> str:
     """
@@ -272,10 +301,14 @@ def infer_output_filepath(args):
     # infer sub dir for output files based on dataset, unit and grade vs level
     dir_name = ''
     
-    if 'newsela-manual' in args.infile:
+    if 'newsela-auto/newsela-manual' in args.infile: # e.g. resources/data/en/newsela-auto/newsela-manual/all/dev.tsv
         dir_name += 'newsela_manual'
-    elif 'wiki-manual' in args.infile:
+    elif 'wiki-auto/wiki-manual' in args.infile:
         dir_name += 'wiki_manual'
+    elif 'newsela-auto/newsela-auto' in args.infile: # e.g. resources/data/en/newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv
+        dir_name += 'newsela_auto'
+    elif 'wiki-auto/wiki-auto' in args.infile:
+        dir_name += 'wiki_auto'
     else:
         raise RuntimeError(f'Could not infer output file name from {args.infile}')
     
@@ -295,20 +328,21 @@ def infer_output_filepath(args):
         dir_name += '_version'
     
     split = Path(args.infile).stem
-    output_file = f'{args.complex_level}-{args.simple_level}_{split}.tsv'
+    if split in ['train', 'dev', 'test']:
+        output_file = f'{args.complex_level}-{args.simple_level}_{split}.tsv'
+    else:
+        output_file = f'{args.complex_level}-{args.simple_level}.tsv'
             
     # build output file path
     output_filepath = Path(args.output_dir) / dir_name / output_file
     
     return output_filepath
 
-def write_to_file(alignments, args):
+def write_to_file(alignments, output_filepath):
 
     if len(alignments) == 0:
         logger.info(f'No alignments found!')
     else:
-        output_filepath = infer_output_filepath(args)
-        output_filepath.parent.mkdir(parents=True, exist_ok=True)
         logger.info(f'Writing to {output_filepath}')
         with open(output_filepath, 'w', encoding='utf8') as outf:
             for src, tgt, _ in alignments:
@@ -316,23 +350,10 @@ def write_to_file(alignments, args):
         print(f'Wrote {len(alignments)} alignments to {output_filepath}')
     return
 
-def extract_alignments_from_newsela(args):
+def extract_alignments_from_newsela_manual(args):
     """
-    Processes annotated alignment file from Newsela-Manual (e.g. `newsela-auto/newsela-manual/all/test.tsv`)
+    Processes manually-annotated alignment file from Newsela-Manual (e.g. `newsela-auto/newsela-manual/all/test.tsv`)
     """
-
-    if args.grade_level:
-        if args.corpus_dir is None:
-            raise RuntimeError(f'If `--grade_level` is set, `--corpus_dir` containing Newsela must be provided')
-        if args.complex_level == 0:
-            raise RuntimeError(f'If `--grade_level` is set, `--complex_level` must correspond to a valid reading grade level in Newsela (e.g [1-12])')
-        if args.simple_level == 0:
-            raise RuntimeError(f'If `--grade_level` is set, `--simple_level` must correspond to a valid reading grade level in Newsela (e.g [1-12])')
-    else:
-        if args.complex_level not in [0, 1, 2, 3]:
-            raise RuntimeError(f'If `--grade_level` is not set, `--complex_level` must correspond to a valid article version in Newsela (e.g [0-4])')
-        if args.simple_level not in [1, 2, 3, 4]:
-            raise RuntimeError(f'If `--grade_level` is not set, `--simple_level` must correspond to a valid article version in Newsela (e.g [0-4])')
 
     df = pd.read_csv(args.infile, sep='\t', header=None, names=['label', 'sid', 'cid', 'ssent', 'csent'], quoting=csv.QUOTE_NONE)
     if args.verbose:
@@ -347,9 +368,8 @@ def extract_alignments_from_newsela(args):
     metadata_df = pd.read_csv(metadata_file, sep=',', header=0, quoting=csv.QUOTE_MINIMAL)
     
     # update ids with to include the grade level
-    # note, we need to keep the version to match the with files in the newsela corpus
-    df['cid'] = df['cid'].apply(lambda x: update_id(x, metadata_df))
-    df['sid'] = df['sid'].apply(lambda x: update_id(x, metadata_df))
+    # note, we need to keep the version info to match the with files in the newsela corpus
+    df['cid'], df['sid'] = zip(*df.progress_apply(lambda row: (update_id(row['cid'], metadata_df), update_id(row['sid'], metadata_df)), axis=1))
 
     # collect all nodes at the target complex level as roots
     root_nodes = []
@@ -391,6 +411,105 @@ def extract_alignments_from_newsela(args):
 
     return alignments
 
+
+def extract_alignments_from_newsela_auto(args):
+    """
+    Similar to the above function but for the auto-aligned data, which is annotated differently.
+
+    Processes auto-annotated alignment file from Newsela-Auto (e.g. `newsela-auto/newsela-auto/all_data/aligned-sentence-pairs-all.tsv`)
+    """
+
+    # if an updated dataframe already exists, load it
+    tmp_data_frame = Path(args.infile).parent / f'{Path(args.infile).stem}_updated_ids.tsv'
+    if tmp_data_frame.exists():
+        print(f'Loading data frame from {tmp_data_frame}')
+        df = pd.read_csv(tmp_data_frame, sep='\t', header=None, names=['sid', 'ssent', 'cid', 'csent'], quoting=csv.QUOTE_NONE)
+    else:
+        df = pd.read_csv(args.infile, sep='\t', header=None, names=['sid', 'ssent', 'cid', 'csent'], quoting=csv.QUOTE_NONE)
+        if args.verbose:
+            logging.info(f'DF contains {len(df)} items')
+        
+        # if args.grade_level and args.metadata_file is not None:
+        metadata_file = Path(args.corpus_dir) / 'articles_metadata.csv'
+        metadata_df = pd.read_csv(metadata_file, sep=',', header=0, quoting=csv.QUOTE_MINIMAL)
+        
+        # update ids with to include the grade level
+        # note, we need to keep the version info to match the with files in the newsela corpus
+        df['cid'], df['sid'] = zip(*df.progress_apply(lambda row: (update_id(row['cid'], metadata_df), update_id(row['sid'], metadata_df)), axis=1))
+
+        # persist the updated data frame to disk so that we don't have to recompute it every time
+        df.to_csv(str(tmp_data_frame), sep='\t', header=False, index=False, quoting=csv.QUOTE_NONE)
+        print(f'Saved updated alignments to {tmp_data_frame}')
+
+    # collect all nodes at the target complex level as roots
+    root_nodes = []
+    for id in df['cid'].unique():
+        _, grade, version, _, _ = parse_id([id])
+
+        if args.grade_level:
+            c_level = grade
+        else:
+            c_level = version
+
+        if c_level == args.complex_level:
+            root_nodes.append([id])
+
+    if args.verbose:
+        logging.info(len(root_nodes))
+        logging.info(root_nodes[:5], '...')
+
+    # collect alignments
+    alignments = []
+    for root_node in tqdm(root_nodes, total=len(root_nodes)):
+        
+        slug, _, _, _, _ = parse_id(root_node)
+        tgt_ids_ = get_aligned_ids(df, root_node, args.simple_level, args.grade_level, args.verbose)
+        if tgt_ids_ is None:
+            continue
+        
+        tgt_ids = []
+        for tgt_id in sorted(tgt_ids_):
+            _, grade, version, _, _ = parse_id([tgt_id])
+            if args.grade_level:
+                s_level = grade
+            else:
+                s_level = version
+            if s_level == args.simple_level and tgt_id not in tgt_ids:
+                tgt_ids.append(tgt_id)
+        
+        if tgt_ids is None:
+            continue
+        
+        c_text, s_text = get_texts(root_node, tgt_ids, df, args.corpus_dir, args.unit, args.verbose)
+        
+        if c_text and s_text:
+            alignments.append((c_text, s_text, slug))
+                 
+    alignments = dedup_sents(alignments)
+
+    # NOTE: alignments are at the sentence level, so we need to do some extra work to extract the paragraph alignments
+    # however, multiple sentences from one paragraph may be aligned to a single sentence in the other paragraph,
+    # while other sentences in the paragraph are aligned to other sentences in other paragraphs.
+    if args.unit in ['p', 'para', 'paras', 'paragraph', 'paragraphs']:
+        alignments = dedup_paragraphs(alignments)
+
+    return alignments
+
+def check_args(args):
+    if args.grade_level:
+        if args.corpus_dir is None:
+            raise RuntimeError(f'If `--grade_level` is set, `--corpus_dir` containing Newsela must be provided')
+        if args.complex_level == 0:
+            raise RuntimeError(f'If `--grade_level` is set, `--complex_level` must correspond to a valid reading grade level in Newsela (e.g [1-12])')
+        if args.simple_level == 0:
+            raise RuntimeError(f'If `--grade_level` is set, `--simple_level` must correspond to a valid reading grade level in Newsela (e.g [1-12])')
+    else:
+        if args.complex_level not in [0, 1, 2, 3]:
+            raise RuntimeError(f'If `--grade_level` is not set, `--complex_level` must correspond to a valid article version in Newsela (e.g [0-4])')
+        if args.simple_level not in [1, 2, 3, 4]:
+            raise RuntimeError(f'If `--grade_level` is not set, `--simple_level` must correspond to a valid article version in Newsela (e.g [0-4])')
+
+    return
 
 # def extract_alignments_from_wiki(args, max_sim=0.6):
 #     """
@@ -452,18 +571,15 @@ if __name__ == '__main__':
 
     args = set_args()
     
-    if args.debug:
-        test()
-    else:
-        if args.wiki:
-            raise NotImplementedError(
-                'Wiki alignments not yet implemented.' \
-                'Use older version of this script ' \
-                '(simple_fudge/data_prep/extract_aligned_sents_wiki_newsela_manual.py)'
-            )
-            aligned_paras = extract_alignments_from_wiki(args)
-        else:
-            aligned_paras = extract_alignments_from_newsela(args)
+    check_args(args)
 
+    output_filepath = infer_output_filepath(args)
+    output_filepath.parent.mkdir(parents=True, exist_ok=True)
+    
+    if 'newsela_auto' in str(output_filepath):
+        alignments = extract_alignments_from_newsela_auto(args)
+    elif 'newsela_manual' in str(output_filepath):
+        alignments = extract_alignments_from_newsela_manual(args)
+    
     # write collected alignments to outfile
-    write_to_file(aligned_paras, args)
+    write_to_file(alignments, output_filepath=output_filepath)

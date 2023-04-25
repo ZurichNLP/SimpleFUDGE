@@ -9,7 +9,7 @@
 
 
 CONDA_INIT=/home/user/kew/anaconda3/etc/profile.d/conda.sh
-# expects muss to be installed in the `installs`` directory in simple_fudge/
+# expects muss to be installed in the `installs` directory in simple_fudge/
 MUSS_DIR=installs/muss
 
 
@@ -85,6 +85,13 @@ src_file_stem=$(basename -- "$src_file")
 src_file_stem="${src_file_stem%.*}"
 echo $src_file_stem
 
+if [[ -d "$out_path" ]]; then
+  echo "Output directory exists: $out_path"
+else
+  echo "Creating output directory: $out_path"
+  mkdir -p $out_path
+fi
+
 out_file="$out_path/${src_file_stem}_lr${len_ratio}_ls${lev_sim}_wr${word_rank}_td${tree_depth}.txt"
 echo $out_file
 
@@ -108,7 +115,7 @@ echo "Writing to $out_file ..."
 python $MUSS_DIR/scripts/simplify.py \
   $tmpfile \
   --model-name muss_en_mined \
-  --out_file $out_file \
+  --outfile $out_file \
   --len_ratio $len_ratio \
   --lev_sim $lev_sim \
   --word_rank $word_rank \

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # -*- coding: utf-8 -*-
 
+# This script prepares the Newsela data for FUDGE.
+# 1) it extracts all sentences from the Newsela articles for training, testing and dev of FUDGE discriminators.
+# 2) it extracts the aligned sentences from the Newsela manual train/test/dev splits for simple-FUDGE experiments.
+
 set -e
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
@@ -19,42 +23,23 @@ echo ""
 
 # extract sentences/paragraphs for training FUDGE discriminators
 # for english
-python extract_newsela_data_for_fudge.py \
+python $SCRIPT_DIR/extract_newsela_texts.py \
     --indir $NEWSELA_DIR \
     --outdir $NEWSELA_DIR/article_paragraphs \
     --meta_data newsela_articles_metadata_with_splits \
     --format paragraph 
 
-python extract_newsela_data_for_fudge.py \
+python $SCRIPT_DIR/extract_newsela_texts.py \
     --indir $NEWSELA_DIR \
     --outdir $NEWSELA_DIR/article_sentences \
     --meta_data newsela_articles_metadata_with_splits \
     --format sentence
 
-python extract_newsela_data_for_fudge.py \
+python $SCRIPT_DIR/extract_newsela_texts.py \
     --indir $NEWSELA_DIR \
     --outdir $NEWSELA_DIR/article_para_sents \
     --meta_data newsela_articles_metadata_with_splits \
-    --format mixed
-
-# # for spanish
-# python extract_newsela_data_for_fudge.py \
-#     --indir $NEWSELA_DIR \
-#     --outdir $NEWSELA_DIR/article_paragraphs_es \
-#     --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
-#     --format paragraph
-
-# python extract_newsela_data_for_fudge.py \
-#     --indir $NEWSELA_DIR \
-#     --outdir $NEWSELA_DIR/article_sentences_es \
-#     --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
-#     --format sentence
-
-# python extract_newsela_data_for_fudge.py \
-#     --indir $NEWSELA_DIR \
-#     --outdir $NEWSELA_DIR/article_para_sents_es \
-#     --meta_data $NEWSELA_DIR/articles_metadata_es_splits.csv \
-#     --format mixed
+    --format para_sent
 
 echo ""
 echo "Succesfully extracted sentences: $NEWSELA_DIR/article_sentences/"
@@ -64,10 +49,11 @@ echo ""
 for level in 1 2 3 4; do
     for split in train test dev; do
         echo "extracting aligned sentences for newsela_manual_v0_v${level}_$split ..."
-        python extract_aligned_sents_wiki_newsela_manual.py \
+        python $SCRIPT_DIR/extract_alignments_newsela.py \
             --infile $DATA_DIR/en/newsela-auto/newsela-manual/all/$split.tsv \
-            --outfile $DATA_DIR/en/aligned/newsela_manual_v0_v${level}_$split.tsv \
-            --complex_level 0 --simple_level $level
+            --corpus_dir $NEWSELA_DIR \
+            --output_dir $DATA_DIR/en/aligned/ \
+            --unit sent --complex_level 0 --simple_level $level
     done
 done
 
