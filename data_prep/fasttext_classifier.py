@@ -23,6 +23,7 @@ Example Call (positive class = 3, negative classes = 0, 1, 2):
 import sys
 from pathlib import Path
 import random
+import argparse
 import string
 
 import fasttext
@@ -42,7 +43,8 @@ def preprocess_data(file, class_label, tokenize=False):
                 line = ' '.join(tokenizer.encode(line.strip(), add_special_tokens=False))
             else:
                 line = line.strip()
-            texts.append(f'__label__{class_label}\t{line}')
+            if line:
+                texts.append(f'__label__{class_label}\t{line}')
     return texts
 
 def write_to_tmp_outfile(data, filepath):
@@ -51,9 +53,8 @@ def write_to_tmp_outfile(data, filepath):
             f.write(item+'\n')
     return
 
-def train(file, epoch=25):
-    model = fasttext.train_supervised(file, epoch=epoch, lr=1.0)
-    # print(model.labels)
+def train(file, epoch=25, lr=0.2):
+    model = fasttext.train_supervised(file, epoch=epoch, lr=lr)
     return model
 
 def print_results(N, p, r):
@@ -61,26 +62,50 @@ def print_results(N, p, r):
     print("P@{}\t{:.3f}".format(1, p))
     print("R@{}\t{:.3f}".format(1, r))
 
+def set_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data_dir', required=True, type=str, help='data directory')
+    parser.add_argument('-p', '--pos_class', required=True, type=int, help='positive class')
+    parser.add_argument('-n', '--neg_classes', required=False, type=int, nargs='+', help='negative classes. If none given, all other classes are used as negative classes.')
+    parser.add_argument('-s', '--seed', required=False, type=int, default=42, help='random seed')
+    parser.add_argument('-c', '--clean_up', action='store_true', help='clean up tmp files after training and evaluation')
+    args = parser.parse_args()
+    return args
+
 if __name__ == '__main__':
 
-    pos_class = sys.argv[1]
-    neg_classes = sys.argv[2:]
+    # pos_class = sys.argv[1]
+    # neg_classes = sys.argv[2:]
 
-    indir = Path('/srv/scratch1/kew/ats/data/en/newsela_article_corpus_2016-01-29/article_sentences/en')
-    tmpdir = Path('/srv/scratch1/kew/ats/data/en/newsela_article_corpus_2016-01-29/article_sentences/fasttext/')
+    args = set_args()
+
+    random.seed(args.seed)
+
+    # indir = Path('resources/data/en/newsela_article_corpus_2016-01-29/article_sentences/en')
+    tmpdir = Path(args.data_dir) / 'tmp'
     tmpdir.mkdir(parents=True, exist_ok=True)
 
     print('preparing data for fasttext...')
+    
+    if not args.neg_classes:
+        files = Path(args.data_dir).glob('*_train.txt')
+        args.neg_classes = [int(f.stem.split('_')[0]) for f in files if int(f.stem.split('_')[0]) != args.pos_class]
+        print('Inferred negative classes: ', args.neg_classes)
+
+    prep_data = {}
     for split in ['train', 'test', 'valid']:
         # pos class
-        p_file = indir / f'{split}_{pos_class}.txt'
+
+        p_file = Path(args.data_dir) / f'{args.pos_class}_{split}.txt'
         pdata = preprocess_data(p_file, 1)
 
         # neg class(es)        
-        n_files = [str(indir / f'{split}_{neg_class}.txt') for neg_class in neg_classes]
+        n_files = [Path(args.data_dir) / f'{neg_class}_{split}.txt' for neg_class in args.neg_classes]
+
         ndata = []
         for n_file in n_files:
-            ndata += preprocess_data(n_file, 0)
+            if n_file.exists():
+                ndata += preprocess_data(n_file, 0)
         random.shuffle(ndata)
         
         # balance out data
@@ -91,12 +116,20 @@ if __name__ == '__main__':
 
         data = pdata + ndata
         random.shuffle(data)
-        write_to_tmp_outfile(data, tmpdir / f'{split}_{pos_class}_{"".join(neg_classes)}.txt')
 
-    print(f'Simp. level {pos_class} vs. {" ".join(neg_classes)}')
-    model = train(str(tmpdir / f'train_{pos_class}_{"".join(neg_classes)}.txt'))
-    print_results(*model.test(str(tmpdir / f'valid_{pos_class}_{"".join(neg_classes)}.txt')))
+        prep_data[split] = str(Path(tmpdir) / f'{split}_{args.pos_class}_{"".join(map(str, args.neg_classes))}.txt')
+        write_to_tmp_outfile(data, prep_data[split])
+
+    # print(f'Simp. level {args.pos_class} vs. {" ".join(map(str, args.neg_classes))}')
+    
+    print(f'training fasttext model on {prep_data["train"]} ...')
+    model = train(prep_data['train'])
+    print(f'evaluating model on {prep_data["valid"]} ...')
+    print_results(*model.test(prep_data['valid']))
+    print(f'evaluating model on {prep_data["test"]} ...')
+    print_results(*model.test(prep_data['test']))
 
     # clean up tmp files
-    for file in tmpdir.iterdir():
-        file.unlink()
+    if args.clean_up:
+        for file in tmpdir.iterdir():
+            file.unlink()

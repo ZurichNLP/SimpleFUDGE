@@ -96,7 +96,7 @@ def predict_simplicity(model, tokenizer, conditioning_model, input_text, args):
 
         logits_processor = LogitsProcessorList()
             
-        if args.condition_lambda > 0.0:
+        if args.condition_model and args.condition_lambda > 0.0:
             # instantiate FUDGE logits processor
             fudge_proc = FUDGELogits(
                 tokenizer=tokenizer, 

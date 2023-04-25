@@ -9,7 +9,7 @@ Author: Tannon Kew
 Example Call:
 
     # newsela-manual parallel version sentences
-    python data_prep/extract_alignments_wiki_newsela_manual.py \
+    python data_prep/extract_alignments_newsela_manual.py \
         --infile resources/data/en/newsela-auto/newsela-manual/all/test.tsv \
         --corpus_dir resources/data/en/newsela_article_corpus_2016-01-29/ \
         --output_dir resources/data/en/aligned/newsela-manual_sents \
@@ -18,7 +18,7 @@ Example Call:
         --unit sent
 
     # newsela-manual parallel reading grade level sentences
-    python data_prep/extract_aligned_paras_wiki_newsela_manual.py \
+    python data_prep/extract_alignments_newsela_manual.py \
         --infile resources/data/en/newsela-auto/newsela-manual/all/test.tsv \
         --corpus_dir resources/data/en/newsela_article_corpus_2016-01-29/ \
         --output_dir resources/data/en/aligned/newsela-manual_sents \
@@ -242,19 +242,19 @@ def get_texts(
     """
     Fetches sentences, paragraphs, or documents from the Newsela corpus according to the IDs provided.
     """
-    if args.unit in ['s', 'sent', 'sents', 'sentence', 'sentences']:
-        c_text, s_text = get_sent_texts(cids, sids, df, verbose=args.verbose)
+    if unit in ['s', 'sent', 'sents', 'sentence', 'sentences']:
+        c_text, s_text = get_sent_texts(cids, sids, df, verbose=verbose)
         
-    elif args.unit in ['p', 'para', 'paras', 'paragraph', 'paragraphs']:
-        c_text = get_para_text(cids, args.corpus_dir, verbose=args.verbose)
-        s_text = get_para_text(sids, args.corpus_dir, verbose=args.verbose)
+    elif unit in ['p', 'para', 'paras', 'paragraph', 'paragraphs']:
+        c_text = get_para_text(cids, corpus_dir, verbose=verbose)
+        s_text = get_para_text(sids, corpus_dir, verbose=verbose)
     
-    elif args.unit in ['d', 'doc', 'docs', 'document', 'documents']:
-        c_text = get_doc_text(cids, args.corpus_dir, verbose=args.verbose)
-        s_text = get_doc_text(sids, args.corpus_dir, verbose=args.verbose)
+    elif unit in ['d', 'doc', 'docs', 'document', 'documents']:
+        c_text = get_doc_text(cids, corpus_dir, verbose=verbose)
+        s_text = get_doc_text(sids, corpus_dir, verbose=verbose)
     
     else:
-        raise RuntimeError(f'Unknown unit {args.unit}')
+        raise RuntimeError(f'Unknown unit {unit}')
 
     return c_text, s_text
 
