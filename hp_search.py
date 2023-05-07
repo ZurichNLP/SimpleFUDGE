@@ -14,7 +14,7 @@ Considers options for the following params:
 
 Example Call:
     
-    python hp_search.py \
+    python -m hp_search \
         --condition_model resources/fudge/discriminators/wiki100M_bart_glove \
         --generation_model resources/fudge/generators/bart_large_paraNMT_filt_fr \
         --outpath hp_search_results \
@@ -34,8 +34,8 @@ from transformers import BartTokenizer, BartForConditionalGeneration
 
 from model import Model
 from predict_simplify import predict_simplicity, generation_arg_parser
-from simplification_evaluation import *
-from perplexity import distilGPT2_perplexity_score
+from evaluation.simplification_evaluation import *
+from evaluation.perplexity import distilGPT2_perplexity_score
 
 
 logger = logging.getLogger()

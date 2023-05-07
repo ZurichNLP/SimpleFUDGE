@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Wraps call to simplification evaluation for all relevant outputs in one script, e.g.
-# python simplification_evaluation.py \
+# python evaluation/simplification_evaluation \
 #     --src_file resources/data/en/aligned/newsela_manual_v0_v1_dev.tsv \
 #     --hyp_file resources/muss/outputs/newsela_manual_v0_v1_dev*.pred
 
@@ -27,7 +27,7 @@ export CUDA_VISIBLE_DEVICES="6" # recommended if computing ppl with gpt2
 for level in 1 2 3 4; do
     # for split in "dev" "test"; do
         echo "scoring $muss_outputs/newsela_manual_v0_v${level}_${split}*.pred"
-        res=$(python simplification_evaluation.py --src_file $src_files/newsela_manual_v0_v${level}_${split}.tsv --hyp_file $muss_outputs/newsela_manual_v0_v${level}_${split}*.pred  --compute_ppl)
+        res=$(python evaluation/simplification_evaluation --src_file $src_files/newsela_manual_v0_v${level}_${split}.tsv --hyp_file $muss_outputs/newsela_manual_v0_v${level}_${split}*.pred  --compute_ppl)
         results+=$"${res:307}\n" # slice string to remove header
         echo -e $results
     # done
@@ -46,7 +46,7 @@ for train_data in "newsela_manual" "newsela_auto"; do
                 echo "scoring $hyp_file ..."
                 # if the relevant file exists, run eval
                 if [[ -f "$hyp_file" ]]; then 
-                    res=$(python simplification_evaluation.py --src_file $src_files/newsela_manual_v0_v${level}_${split}.tsv --hyp_file $hyp_file --compute_ppl)
+                    res=$(python evaluation/simplification_evaluation --src_file $src_files/newsela_manual_v0_v${level}_${split}.tsv --hyp_file $hyp_file --compute_ppl)
                     # if the resul is not empyt, add to full results
                     [[ ! -z "$res" ]] && results+=$"${res:307}\n" || echo "failed to score $hyp_file"
                 fi
@@ -71,7 +71,7 @@ for disc_type in "article_para_sents" "article_paragraphs"; do
                         echo "scoring $hyp_file ..."
                         # if the relevant file exists, run eval
                         if [[ -f "$hyp_file" ]]; then 
-                            res=$(python simplification_evaluation.py --src_file $src_files/newsela_manual_v0_v${split_level}_${split}.tsv --hyp_file $hyp_file --compute_ppl)
+                            res=$(python evaluation/simplification_evaluation --src_file $src_files/newsela_manual_v0_v${split_level}_${split}.tsv --hyp_file $hyp_file --compute_ppl)
                             # if the resul is not empyt, add to full results
                             [[ ! -z "$res" ]] && results+=$"${res:307}\n" || echo "failed to score $hyp_file"
                             # echo -e $results

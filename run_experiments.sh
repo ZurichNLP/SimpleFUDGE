@@ -207,7 +207,7 @@ train_newsela_ablation_discriminators() {
                     --num_beams 5 --num_return_sequences 5 \
                     --repetition_penalty 1.2 && echo "Finished decoding $infile_stem.tsv with discrimator $SAVE_DIR"
                 
-                python simplification_evaluation.py \
+                python evaluation/simplification_evaluation.py \
                     --src_file "$EVAL_DATA_DIR/$infile_stem.tsv" \
                     --hyp_file $SAVE_DIR/$gen_model/$cond_model/$infile_stem/lambda$lambda*.txt | tee $SAVE_DIR/$gen_model/$cond_model/$infile_stem/results.csv && echo "Finished scoring generations with discrimator $SAVE_DIR"
                 
@@ -324,7 +324,7 @@ train_newsela_ablation_discriminators_on_line_parts() {
                     --num_beams 5 --num_return_sequences 5 \
                     --repetition_penalty 1.2 && echo "Finished decoding $infile_stem.tsv with discrimator $SAVE_DIR"
                 
-                python simplification_evaluation.py \
+                python evaluation/simplification_evaluation.py \
                     --src_file "$EVAL_DATA_DIR/$infile_stem.tsv" \
                     --hyp_file $SAVE_DIR/$gen_model/$cond_model/$infile_stem/lambda$lambda*.txt | tee $SAVE_DIR/$gen_model/$cond_model/$infile_stem/results.csv && echo "Finished scoring generations with discrimator $SAVE_DIR"
                 
@@ -722,7 +722,7 @@ demo() {
 #             --repetition_penalty 1.2
 
 #         # run evaluation and write result to file
-#         # python simplification_evaluation.py \
+#         # python evaluation/simplification_evaluation.py \
 #         #     --src_file $data_dir/${file}_${split}.tsv \
 #         #     --hyp_file $outpath/$gen_model/$cond_model/${file}_${split}/lambda$lambda*.txt | tee -a $outpath/$gen_model/$cond_model/${file}_${split}/results.csv
 #     done
@@ -903,7 +903,7 @@ decode_supervised_labeled() {
             # hyp_files=$(find $outpath/newsela_manual_v0_v${level}_${split} -name "lambda0*.txt")
             # for hyp_file in $hyp_files; do
             #     echo "Running evaluation on $hyp_file"
-            #     python simplification_evaluation.py \
+            #     python evaluation/simplification_evaluation.py \
             #         --src_file $input_dir/newsela_manual_v0_v${level}_${split}.tsv \
             #         --hyp_file $hyp_file
             # done

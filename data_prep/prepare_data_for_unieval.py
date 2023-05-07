@@ -3,8 +3,17 @@
 
 """
 
+Example call:
 
+    python data_prep/prepare_data_for_unieval.py \
+        --pos_examples resources/data/en/aligned/newsela_manual_sents_version/0-4_dev.tsv \
+        --neg_examples resources/uni_eval/muss/0-4_dev_lr1.0_ls0.9_wr1.0_td1.0.txt \
+        --output_dir resources/uni_eval/
 
+    python data_prep/prepare_data_for_unieval.py \
+        --pos_examples resources/data/en/aligned/newsela_auto_sents_version/0-4.tsv \
+        --neg_examples resources/uni_eval/muss/0-4_lr1.0_ls0.9_wr1.0_td1.0.txt \
+        --output_dir resources/uni_eval/
 
 """
 
@@ -15,14 +24,17 @@ import pandas as pd
 from tqdm import tqdm
 import csv
 import json
+import random
 from easse import fkgl, quality_estimation # samsa fails dep: tupa
 from evaluate import load
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pos_examples', type=str, required=True)
-    parser.add_argument('--neg_examples', type=str, required=True)
-    parser.add_argument('--outfile', type=str, required=True)
+    parser.add_argument('--pos_examples', type=str, required=True, help='line-aligned parallel pairs of source and human-written reference')
+    parser.add_argument('--neg_examples', type=str, required=True, help='corrupted examples')
+    parser.add_argument('--output_dir', type=str, required=True, help='output directory, outfile name is inferred from input file names')
+    parser.add_argument('--seed', type=int, default=42, help='random seed')
+    parser.add_argument('--num_samples', type=int, default=30000, help='number of samples to take from the positive/negative examples')
     return parser.parse_args()
 
 def iter_lines(path, sep='\t', col_num=0):
@@ -132,23 +144,33 @@ def write_to_json_file(df, outfile, question=''):
     c = 0
     with open(outfile, 'w', encoding='utf8') as outf:
         for i, row in df.iterrows():
-            pos_data = {"src": f"question: {question} </s> text: {row['pos']} </s> original: {row['source']}", "tgt": "Yes"}
-            neg_data = {"src": f"question: {question} </s> text: {row['neg']} </s> original: {row['source']}", "tgt": "No"}
-            outf.write(json.dumps(pos_data, ensure_ascii=False) + '\n')
-            outf.write(json.dumps(neg_data, ensure_ascii=False) + '\n')
-            c += 2
+            if row['example_type'] == 'pos':
+                data = {"src": f"question: {question} </s> text: {row['target']} </s> original: {row['source']}", "tgt": "Yes"}
+            elif row['example_type'] == 'neg':
+                data = {"src": f"question: {question} </s> text: {row['target']} </s> original: {row['source']}", "tgt": "No"}
+            outf.write(json.dumps(data, ensure_ascii=False) + '\n')
+            c += 1
     print(f'Wrote {c} examples to {outfile}')
     return
+
+def infer_output_file(output_dir: str, pos_examples: str, neg_examples: str) -> str:
+    outfile = Path(output_dir) / f'uni_eval-{Path(pos_examples).stem}-{Path(neg_examples).stem}.json'
+    outfile.parent.mkdir(parents=True, exist_ok=True)
+
+    return str(outfile)
 
 if __name__ == '__main__':
 
     args = parse_args()
-    
     source_sents = list(iter_lines(args.pos_examples, col_num=0))
     pos_examples = list(iter_lines(args.pos_examples, col_num=1))
     neg_examples = list(iter_lines(args.neg_examples, col_num=0))
 
     assert len(source_sents) == len(pos_examples) == len(neg_examples)
+
+    # infer output file name from input file names
+    outfile = infer_output_file(args.output_dir, args.pos_examples, args.neg_examples)
+    print(f'Writing to {outfile}...')
 
     df = pd.DataFrame({'source': source_sents, 'pos': pos_examples, 'neg': neg_examples})
     df = clean_parallel_pairs(df)
@@ -167,14 +189,14 @@ if __name__ == '__main__':
     df = compute_bertscore(df, src_col='source', target_col='neg')
 
     df = drop_outliers(df, target_col='neg_lev_sim', lower_bound=0.05, upper_bound=0.95) # anything less than 0.7 seems reasonable upon inspection
-    
 
-    # df.reset_index(drop=True, inplace=True)
-    Path(args.outfile).parent.mkdir(parents=True, exist_ok=True)
-    if args.outfile.endswith('.json'):
-        write_to_json_file(df, args.outfile, question = "Is this text easier to read and understand than the original?")
-    elif args.outfile.endswith('.tsv'):
-        df.to_csv(args.outfile, sep='\t', index=False, header=True, encoding='utf-8', line_terminator='\n', float_format='%.4f',
-              quoting=csv.QUOTE_ALL)
-    
-    # breakpoint()
+    # convert from wide to long (dropping metrics that are not needed for the task)
+    df = pd.melt(df, id_vars='source', value_vars=['pos', 'neg'], var_name='example_type', value_name='target')
+
+    if args.num_samples and len(df) > args.num_samples:        
+        df = df.sample(n=args.num_samples, random_state=args.seed, replace=False).reset_index(drop=True)
+    else:
+        print(f'Not sampling because num_samples={args.num_samples} and len(df)={len(df)}')
+        df = df.sample(frac=1.0, random_state=args.seed, replace=False).reset_index(drop=True)
+
+    write_to_json_file(df, outfile, question = "Is this text easier to read and understand than the original?")
