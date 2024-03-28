@@ -335,6 +335,42 @@ train_newsela_ablation_discriminators_on_line_parts() {
 
 }
 
+# bash run_experiments.sh train_simple_onestopenglish_discriminator_on_line_parts 0 1
+# bash run_experiments.sh train_simple_onestopenglish_discriminator_on_line_parts 1 2
+train_simple_onestopenglish_discriminator_on_line_parts() {
+
+    GPU=$1
+    TGT_LEVEL=$2
+    
+    DATA_DIR=$SCRATCH/data/en/OneStopEnglishCorpus/splits
+    TOKENIZER="facebook/bart-large"
+    
+    SAVE_DIR=$SCRATCH/fudge/discriminators/onestopenglish_l${TGT_LEVEL}
+
+    mkdir -p $SAVE_DIR
+
+    export CUDA_VISIBLE_DEVICES=$GPU
+    echo "Running on GPU(s) $GPU"
+    # batch_size used = 64 for no line parts, 256 for line parts
+    # epochs = 20 for no line parts, 8 for line parts
+    python main.py \
+        --task simplify \
+        --data_dir $DATA_DIR \
+        --save_dir $SAVE_DIR \
+        --tgt_level $TGT_LEVEL \
+        --model_path_or_name $TOKENIZER \
+        --num_workers 12 \
+        --lr 1e-6 \
+        --use_line_parts \
+        --batch_size 32 \
+        --epochs 10 \
+        --glove 'glove-wiki-gigaword-300' \
+        --wandb simple_fudge
+    
+    echo "Finished training discrimator"
+}
+
+
 train_simple_apa_capito_discriminator() {
 
     GPU=$1
@@ -584,6 +620,50 @@ finetune_bart_large_on_supervised_labeled_newsela_auto() {
 
 }
 
+
+finetune_bart_large_on_supervised_labeled_onestopenglish() {
+
+    # prepare the data using data/prepare_data_for_supervised.ipynb first!
+    GPU="5"
+
+    save_dir=$SCRATCH/supervised/onestopenglish
+    data_dir=$save_dir/data
+
+    transformers_dir=$BASE/installs/transformers
+    
+    echo "Initialising training run on GPU(s): $GPU"
+    export CUDA_VISIBLE_DEVICES=$GPU
+
+    python $transformers_dir/examples/pytorch/summarization/run_summarization.py \
+        --model_name_or_path "facebook/bart-large" \
+        --output_dir $save_dir/bart --overwrite_output_dir \
+        --train_file $data_dir/train.json \
+        --validation_file $data_dir/valid.json \
+        --test_file $data_dir/test.json \
+        --text_column "complex" \
+        --summary_column "simple" \
+        --max_source_length 256 \
+        --max_target_length 128 \
+        --preprocessing_num_workers 16 \
+        --seed 42 \
+        --overwrite_cache True \
+        --learning_rate 3e-05 --weight_decay 0.01 \
+        --per_device_train_batch_size 8 --gradient_accumulation_steps 4 \
+        --optim adamw_hf --adam_beta1 0.9 --adam_beta2 0.999 --adam_epsilon 1e-8 \
+        --lr_scheduler_type polynomial --warmup_steps 500 \
+        --label_smoothing_factor 0.1 --fp16 \
+        --max_steps 20000 \
+        --evaluation_strategy "steps" \
+        --do_train --do_eval \
+        --do_predict --predict_with_generate --num_beams 4 \
+        --logging_steps 100 --save_steps 100 --save_total_limit 1 \
+        --metric_for_best_model "rouge1" --load_best_model_at_end \
+        --report_to "wandb"
+
+    echo "Finished training supervised model on OneStopEnglish"
+}
+
+
 ###########
 # HP SEARCH
 ###########
@@ -706,7 +786,7 @@ demo() {
 #     split=$5
     
 #     data_dir=$SCRATCH/data/en/aligned
-#     outpath=$SCRATCH/fudge/results
+#     outpath=$SCRATCH/fudge/outputs
 
 #     # for file in asset_test.tsv newsela_manual_v0_v4_test.tsv wiki_manual_test.tsv
 #     for file in newsela_manual_v0_v1 newsela_manual_v0_v2 newsela_manual_v0_v3 newsela_manual_v0_v4 wiki_manual asset turk; do
@@ -743,7 +823,7 @@ demo() {
 #     split=$5
     
 #     data_dir=$SCRATCH/data/en/aligned
-#     outpath=$SCRATCH/fudge/results
+#     outpath=$SCRATCH/fudge/outputs
 
 #     for level in 1 2 3 4; do
 #         # run inference
@@ -767,7 +847,7 @@ decode_newsela_all_levels_with_l4_classifier() {
     export CUDA_VISIBLE_DEVICES=$gpu
     
     data_dir=$SCRATCH/data/en/aligned
-    outpath=$SCRATCH/fudge/results
+    outpath=$SCRATCH/fudge/outputs
     gen_model="bart_large_muss_mined_en"
     
     levels=( 1 2 3 4 )
@@ -820,7 +900,7 @@ decode_newsela_level() {
     gen_model="bart_large_muss_mined_en"
     
     data_dir=$SCRATCH/data/en/aligned
-    outpath=$SCRATCH/fudge/results
+    outpath=$SCRATCH/fudge/outputs
 
     for split in dev test; do
         # run inference
@@ -836,10 +916,11 @@ decode_newsela_level() {
     done
 }
 
-# bash run_experiments.sh decode_newsela_level_on_line_parts 1 1 1 paragraphs &
-# bash run_experiments.sh decode_newsela_level_on_line_parts 2 4 2 paragraphs &
-# bash run_experiments.sh decode_newsela_level_on_line_parts 3 4 3 paragraphs &
-# bash run_experiments.sh decode_newsela_level_on_line_parts 4 5 4 paragraphs &
+
+# bash run_experiments.sh decode_newsela_level_on_line_parts 1 1 1 paragraphs
+# bash run_experiments.sh decode_newsela_level_on_line_parts 2 4 2 paragraphs
+# bash run_experiments.sh decode_newsela_level_on_line_parts 3 4 3 paragraphs
+# bash run_experiments.sh decode_newsela_level_on_line_parts 4 5 4 paragraphs
 decode_newsela_level_on_line_parts() {
     
     gpu=$1
@@ -853,9 +934,10 @@ decode_newsela_level_on_line_parts() {
     gen_model="bart_large_muss_mined_en"
     
     data_dir=$SCRATCH/data/en/aligned
-    outpath=$SCRATCH/fudge/results
+    outpath=$SCRATCH/fudge/outputs
 
-    for split in dev test; do
+    # for split in dev test; do
+    for split in test; do
         # run inference
         python inference.py \
             --infile "$data_dir/newsela_manual_v0_v${level}_${split}.tsv" --outpath "$outpath" \
@@ -871,7 +953,7 @@ decode_newsela_level_on_line_parts() {
 
 
 
-# bash run_experiments.sh decode_supervised_labeled newsela_manual 6
+# bash run_experiments.sh decode_supervised_labeled newsela_manual 4
 # bash run_experiments.sh decode_supervised_labeled newsela_auto 6
 decode_supervised_labeled() {
 
@@ -879,13 +961,14 @@ decode_supervised_labeled() {
 
     input_dir=$SCRATCH/data/en/aligned
     exp_dir=$SCRATCH/supervised/$data
-    outpath=$exp_dir/results
+    outpath=$exp_dir/outputs
     
     gpu=$2
     export CUDA_VISIBLE_DEVICES=$gpu
 
     for level in 1 2 3 4; do   
-        for split in dev test; do
+        # for split in dev test; do
+        for split in testcattrain; do
             # insert labels used in training
             cat $input_dir/newsela_manual_v0_v${level}_${split}.tsv | sed "s/^/<l${level}> /" > $exp_dir/data/newsela_manual_v0_v${level}_${split}.tsv
         
@@ -896,7 +979,7 @@ decode_supervised_labeled() {
                 --generation_model $exp_dir/bart_ft_ckpt \
                 --condition_lambda "0" \
                 --batch_size 1 \
-                --num_beams 5 --num_return_sequences 5 \
+                --num_beams 5 --num_return_sequences 5
 
             # constructed outphath has the form:
             # echo "$outpath/$gen_model/$cond_model/newsela_manual_v0_v${level}_${split}"

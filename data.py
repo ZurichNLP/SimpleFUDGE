@@ -338,6 +338,71 @@ class Dataset:
                     pickle.dump(self.splits, pklf, pickle.HIGHEST_PROTOCOL)
                 print(f'saved data splits in {outpath}')
 
+            elif 'OneStopEnglish' in args.data_dir:
+                # breakpoint()
+                simp_levels = [0, 1, 2] 
+
+                self.vocab['placeholder'] = 1 # anything so we don't crash
+                
+                # collect positive samples
+                pos_train, pos_val, pos_test = [], [], []
+                for split in ['train', 'test', 'valid']:
+                    with open(os.path.join(args.data_dir, f'{split}_{args.tgt_level}.txt'), 'r') as rf:
+                        for i, line in enumerate(rf):
+                            if args.use_line_parts:
+                                line_parts = split_line(line.strip()) # this doesn't seem to make a difference
+                            else:
+                                line_parts = [line.strip()]
+                            
+                            for lp in line_parts:
+                                if split == 'test':
+                                    pos_test.append((lp, 1))
+                                elif split == 'valid':
+                                    pos_val.append((lp, 1))
+                                else:
+                                    pos_train.append((lp, 1))
+
+                
+                # collect all negative samples, i.e. sentences
+                # from more complex language levels in Newsela
+                neg_train, neg_val, neg_test = [], [], []
+                # neg_simp_levels = list(filter(lambda x: x < int(args.tgt_level) simp_levels))
+                neg_simp_levels = [0]
+                for split in ['train', 'test', 'valid']:
+                    for simp_level in neg_simp_levels:
+                        with open(os.path.join(args.data_dir, f'{split}_{simp_level}.txt'), 'r') as rf:
+                            for i, line in enumerate(rf):
+                                if args.use_line_parts:
+                                    line_parts = split_line(line.strip()) # this doesn't seem to make a difference
+                                else:
+                                    line_parts = [line.strip()]
+
+                                for lp in line_parts:
+                                    if split == 'test':
+                                        neg_test.append((lp, 0))
+                                    elif split == 'valid':
+                                        neg_val.append((lp, 0))
+                                    else:
+                                        neg_train.append((lp, 0))
+
+                # shuffle collected negative samples
+                random.Random(SEED).shuffle(neg_train)
+                random.Random(SEED).shuffle(neg_val)
+                random.Random(SEED).shuffle(neg_test)
+                self.splits = {}
+                self.splits['train'] = pos_train + neg_train[:len(pos_train)]
+                self.splits['val'] = pos_val + neg_val[:len(pos_val)]
+                self.splits['test'] = pos_test + neg_test[:len(pos_test)]
+
+                random.Random(SEED).shuffle(self.splits['train'])
+                random.Random(SEED).shuffle(self.splits['val'])
+                random.Random(SEED).shuffle(self.splits['test'])
+
+                # pickle dataset for later
+                with open(outpath, 'wb') as pklf:
+                    pickle.dump(self.splits, pklf, pickle.HIGHEST_PROTOCOL)
+                print(f'saved data splits in {outpath}')
+
         ####################
 
             ############
