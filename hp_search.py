@@ -21,6 +21,13 @@ Example Call:
         --do_sample True --top_k 5 \
         --log_to_file \
         --max_lines 50
+    
+    python -m hp_search \
+        --condition_model resources/fudge/discriminators/onestopenglish_l1 \
+        --generation_model resources/fudge/generators/bart_large_muss_mined_en \
+        --outpath resources/fudge/discriminators/onestopenglish_l1/hp_search \
+        --log_to_file \
+        --max_lines 50
 """
 
 from pathlib import Path
@@ -35,7 +42,7 @@ from transformers import BartTokenizer, BartForConditionalGeneration
 from model import Model
 from predict_simplify import predict_simplicity, generation_arg_parser
 from evaluation.simplification_evaluation import *
-from evaluation.perplexity import distilGPT2_perplexity_score
+# from evaluation.perplexity import distilGPT2_perplexity_score
 
 
 logger = logging.getLogger()
@@ -125,7 +132,8 @@ if __name__ == '__main__':
                     lresults['fkgl'] = fkgl.corpus_fkgl(hyp_sents)
                     # NOTE: when computing ppl with gpt-2, we prefix each sentence with a
                     # full-stop so that the entire generated sentence is scored correctly!
-                    lresults['ppl'] = np.nanmean(np.array([distilGPT2_perplexity_score('. ' + sent) for sent in hyp_sents]))
+                    # lresults['ppl'] = np.nanmean(np.array([distilGPT2_perplexity_score('. ' + sent) for sent in hyp_sents]))
+                    lresults['ppl'] = np.nan
                     lresults['wlen'] = sum([len(sent.strip().split()) for sent in hyp_sents]) / len(hyp_sents)
                     lresults['empty'] = sum([1 for sent in hyp_sents if len(sent.strip()) == 0])
                     results.append(lresults)
@@ -144,6 +152,7 @@ if __name__ == '__main__':
     logger.info(f'*********')
 
     results_output_file = Path(args.outpath) / f'results.csv'
+    Path(results_output_file).parent.mkdir(parents=True, exist_ok=True)
     logger.info(f'Writing Dataframe to {results_output_file}...')
     df = pd.DataFrame(results)
     df.to_csv(results_output_file)
