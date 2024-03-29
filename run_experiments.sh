@@ -624,7 +624,7 @@ finetune_bart_large_on_supervised_labeled_newsela_auto() {
 finetune_bart_large_on_supervised_labeled_onestopenglish() {
 
     # prepare the data using data/prepare_data_for_supervised.ipynb first!
-    GPU="5"
+    GPU="0"
 
     save_dir=$SCRATCH/supervised/onestopenglish
     data_dir=$save_dir/data
@@ -649,7 +649,6 @@ finetune_bart_large_on_supervised_labeled_onestopenglish() {
         --overwrite_cache True \
         --learning_rate 3e-05 --weight_decay 0.01 \
         --per_device_train_batch_size 8 --gradient_accumulation_steps 4 \
-        --optim adamw_hf --adam_beta1 0.9 --adam_beta2 0.999 --adam_epsilon 1e-8 \
         --lr_scheduler_type polynomial --warmup_steps 500 \
         --label_smoothing_factor 0.1 --fp16 \
         --max_steps 20000 \
@@ -660,6 +659,7 @@ finetune_bart_large_on_supervised_labeled_onestopenglish() {
         --metric_for_best_model "rouge1" --load_best_model_at_end \
         --report_to "wandb"
 
+    # --optim adamw_hf --adam_beta1 0.9 --adam_beta2 0.999 --adam_epsilon 1e-8 \
     echo "Finished training supervised model on OneStopEnglish"
 }
 
@@ -693,6 +693,7 @@ hp_search_test() {
 }
 
 # bash run_experiments.sh hp_search_beam 2 50 newsela-lp_l1_article_paragraphs &
+# bash run_experiments.sh hp_search_beam 1 50 onestopenglish_l1
 hp_search_beam() {
 
     GPU=$1
@@ -703,22 +704,29 @@ hp_search_beam() {
     gen_model="bart_large_muss_mined_en"
     outdir=$SCRATCH/fudge/hpsearch/$gen_model/$cond_model/beam
 
+    if [[ $cond_model == "onestopenglish"* ]]; then
+        datasets="onestopenglish_l0_l1_valid onestopenglish_l0_l2_valid"
+    else
+        datasets="newsela_manual_v0_v1_dev newsela_manual_v0_v2_dev newsela_manual_v0_v3_dev newsela_manual_v0_v4_dev asset_dev turk_dev wiki_manual_dev"
+    fi
+
     mkdir -p $outdir
 
     echo "Running on GPU(s) $GPU"
 
-    python hp_search.py \
+    echo "datasets: $datasets"
+
+    python -m hp_search \
         --condition_model $SCRATCH/fudge/discriminators/$cond_model \
         --generation_model $SCRATCH/fudge/generators/$gen_model \
         --outpath $outdir \
         --data_dir $SCRATCH/data/en/aligned \
-        --datasets newsela_manual_v0_v1_dev newsela_manual_v0_v2_dev newsela_manual_v0_v3_dev newsela_manual_v0_v4_dev asset_dev turk_dev wiki_manual_dev \
+        --datasets $datasets \
         --max_lines $max_lines --batch_size 1 \
         --log_to_file
 
     echo "Finished HP sweep. See results in $outdir"
 
-    # --datasets newsela_manual_v0_v1_dev newsela_manual_v0_v2_dev newsela_manual_v0_v3_dev newsela_manual_v0_v4_dev \
 }
 
 hp_search_topk() {
@@ -771,73 +779,6 @@ demo() {
         
 }
 
-
-# decode_data() {
-
-#     # Example call:
-#     #   bash run_experiments.sh decode_data 2 5 newsela_l4_article_paragraphs bart_large_muss_mined_en dev
-
-#     gpu=$1
-#     export CUDA_VISIBLE_DEVICES=$gpu
-    
-#     lambda=$2
-#     cond_model=$3
-#     gen_model=$4
-#     split=$5
-    
-#     data_dir=$SCRATCH/data/en/aligned
-#     outpath=$SCRATCH/fudge/outputs
-
-#     # for file in asset_test.tsv newsela_manual_v0_v4_test.tsv wiki_manual_test.tsv
-#     for file in newsela_manual_v0_v1 newsela_manual_v0_v2 newsela_manual_v0_v3 newsela_manual_v0_v4 wiki_manual asset turk; do
-#         # run inference
-#         python inference.py \
-#             --infile $data_dir/${file}_${split}.tsv --outpath $outpath \
-#             --condition_model $SCRATCH/fudge/discriminators/$cond_model \
-#             --generation_model $SCRATCH/fudge/generators/$gen_model \
-#             --condition_lambda $lambda \
-#             --precondition_topk 200 \
-#             --batch_size 1 \
-#             --num_beams 5 --num_return_sequences 5 \
-#             --repetition_penalty 1.2
-
-#         # run evaluation and write result to file
-#         # python evaluation/simplification_evaluation.py \
-#         #     --src_file $data_dir/${file}_${split}.tsv \
-#         #     --hyp_file $outpath/$gen_model/$cond_model/${file}_${split}/lambda$lambda*.txt | tee -a $outpath/$gen_model/$cond_model/${file}_${split}/results.csv
-#     done
-# }
-
-# decode_newsela_all_levels() {
-
-#     # Example call:
-#     #   nohup bash run_experiments.sh decode_newsela_all_levels 2 8 newsela_l3_article_paragraphs bart_large_muss_mined_en dev >| decoding.dev.3.log &
-#     #   nohup bash run_experiments.sh decode_newsela_all_levels 2 5 newsela_l3_article_paragraphs bart_large_muss_mined_en dev >| decoding.dev.3.log &
-
-#     gpu=$1
-#     export CUDA_VISIBLE_DEVICES=$gpu
-    
-#     lambda=$2
-#     cond_model=$3
-#     gen_model=$4
-#     split=$5
-    
-#     data_dir=$SCRATCH/data/en/aligned
-#     outpath=$SCRATCH/fudge/outputs
-
-#     for level in 1 2 3 4; do
-#         # run inference
-#         python inference.py \
-#             --infile $data_dir/newsela_manual_v0_v${level}_${split}.tsv --outpath $outpath \
-#             --condition_model $SCRATCH/fudge/discriminators/$cond_model \
-#             --generation_model $SCRATCH/fudge/generators/$gen_model \
-#             --condition_lambda $lambda \
-#             --precondition_topk 200 \
-#             --batch_size 1 \
-#             --num_beams 5 --num_return_sequences 5 \
-#             --repetition_penalty 1.2
-#     done
-# }
 
 # bash run_experiments.sh decode_newsela_all_levels_with_l4_classifier 3
 decode_newsela_all_levels_with_l4_classifier() {
@@ -951,11 +892,43 @@ decode_newsela_level_on_line_parts() {
     done
 }
 
+# bash run_experiments.sh decode_onstopenglish_level_on_line_parts 0 7 1
+# bash run_experiments.sh decode_onstopenglish_level_on_line_parts 1 8 2
+decode_onstopenglish_level_on_line_parts() {
+    
+    gpu=$1
+    export CUDA_VISIBLE_DEVICES=$gpu
+    
+    lambda=$2
+    level=$3
+
+    cond_model="onestopenglish_l${level}"
+    gen_model="bart_large_muss_mined_en"
+    
+    data_dir=$SCRATCH/data/en/aligned
+    outpath=$SCRATCH/fudge/outputs
+
+    for sub_lambda in 0 $lambda; do
+        for split in test; do
+            # run inference
+            echo "Running inference on OneStopEnglish level $level with lambda $sub_lambda"
+            python inference.py \
+                --infile "$data_dir/onestopenglish_l0_l${level}_${split}.tsv" --outpath "$outpath" \
+                --condition_model "$SCRATCH/fudge/discriminators/$cond_model" \
+                --generation_model "$SCRATCH/fudge/generators/$gen_model" \
+                --condition_lambda "$sub_lambda" \
+                --precondition_topk 200 \
+                --batch_size 1 \
+                --num_beams 5 --num_return_sequences 5 \
+                --repetition_penalty 1.2
+        done
+    done
+}
 
 
-# bash run_experiments.sh decode_supervised_labeled newsela_manual 4
-# bash run_experiments.sh decode_supervised_labeled newsela_auto 6
-decode_supervised_labeled() {
+# bash run_experiments.sh decode_supervised_labeled_newsela newsela_manual 4
+# bash run_experiments.sh decode_supervised_labeled_newsela newsela_auto 6
+decode_supervised_labeled_newsela() {
 
     data=$1 # newsela_auto or newsela_manual
 
@@ -990,6 +963,36 @@ decode_supervised_labeled() {
             #         --src_file $input_dir/newsela_manual_v0_v${level}_${split}.tsv \
             #         --hyp_file $hyp_file
             # done
+        done
+    done
+
+}
+
+# bash run_experiments.sh decode_supervised_labeled_onestopenglish onestopenglish 0
+decode_supervised_labeled_onestopenglish() {
+
+    data=$1 # newsela_auto or newsela_manual
+
+    input_dir=$SCRATCH/data/en/aligned
+    exp_dir=$SCRATCH/supervised/$data
+    outpath=$exp_dir/outputs
+    
+    gpu=$2
+    export CUDA_VISIBLE_DEVICES=$gpu
+
+    for level in 1 2; do   
+        for split in test; do
+            # insert labels used in training
+            cat $input_dir/onestopenglish_l0_l${level}_${split}.tsv | sed "s/^/<L${level}> /" > $exp_dir/data/onestopenglish_l0_l${level}_${split}.tsv
+        
+            # run inference
+            python inference.py \
+                --infile $exp_dir/data/onestopenglish_l0_l${level}_${split}.tsv --outpath $outpath \
+                --generation_model $exp_dir/bart \
+                --condition_lambda "0" \
+                --batch_size 1 \
+                --num_beams 5 --num_return_sequences 5
+
         done
     done
 

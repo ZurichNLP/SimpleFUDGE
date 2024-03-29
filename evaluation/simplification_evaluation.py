@@ -28,8 +28,8 @@ from easse import sari, bleu, fkgl, bertscore, quality_estimation # samsa fails 
 from sentence_transformers import SentenceTransformer, util
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
-from perplexity import distilGPT2_perplexity_score
-from distinct_n import distinct
+from evaluation.perplexity import distilGPT2_perplexity_score
+from evaluation.distinct_n import distinct
 
 def set_args():
     parser = argparse.ArgumentParser()
