@@ -20,18 +20,32 @@ source $CONDA_INIT
 conda activate muss
 echo "Activated environment: $CONDA_DEFAULT_ENV ..."
 
-# run simplification model
-for level in 1 2 3 4; do
-    for split in dev test; do
-        python $MUSS_DIR/scripts/simplify_file.py \
-            $src_data/newsela_manual_v0_v${level}_dev.tsv \
-            --model-name muss_en_mined \
-            --out_path $out_data \
-            --params_file $out_data/finetune_newsela_v0_v${level}_50_params.json
+# # run simplification model
+# for level in 1 2 3 4; do
+#     for split in test testcattrain; do
+#         python $MUSS_DIR/custom_scripts/simplify_file.py \
+#             $src_data/newsela_manual_v0_v${level}_${split}.tsv \
+#             --model_name muss_en_mined \
+#             --out_path $out_data \
+#             --param_file $out_data/finetune_newsela_v0_v${level}_50_params.json
 
-            echo "Finised $src_data/newsela_manual_v0_v${level}_${split}.tsv ..."
+#             echo "Finised $src_data/newsela_manual_v0_v${level}_${split}.tsv ..."
+#     done
+# done
+
+# run simplification model
+for level in 1 2; do
+    for split in test; do
+        python $MUSS_DIR/custom_scripts/simplify_file.py \
+            $src_data/onestopenglish_0_${level}_${split}.tsv \
+            --model_name muss_en_mined \
+            --out_path $out_data \
+            --param_file $out_data/finetune_onestopenglish_l${level}_50_params.json
+
+            echo "Finised $src_data/onestopenglish_0_${level}_${split}.tsv ..."
     done
 done
+
 
 conda deactivate
 
