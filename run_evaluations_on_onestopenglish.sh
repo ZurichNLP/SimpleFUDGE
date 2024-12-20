@@ -19,7 +19,7 @@ fudge_outputs=$SCRATCH/fudge/outputs/bart_large_muss_mined_en
 fsllm_outputs=$SCRATCH/fsllm/outputs
 
 # init results as header from evaldataframe
-results=$"bleu;sari;fkgl;pbert_ref;rbert_ref;fbert_ref;pbert_src;rbert_src;fbert_src;ppl_mean;ppl_std;lens;lens_std;intra_dist1;intra_dist2;inter_dist1;inter_dist2;Compression ratio;Sentence splits;Levenshtein similarity;Exact copies;Additions proportion;Deletions proportion;Lexical complexity score;file_id\n"
+results=$"bleu;sari;sari_add;sari_keep;sari_del;fkgl;pbert_ref;rbert_ref;fbert_ref;pbert_src;rbert_src;fbert_src;ppl_mean;ppl_std;lens;lens_std;intra_dist1;intra_dist2;inter_dist1;inter_dist2;Compression ratio;Sentence splits;Levenshtein similarity;Exact copies;Additions proportion;Deletions proportion;Lexical complexity score;file_id\n"
 
 gpu=${1:-"0"}
 split=${2:-"test"}

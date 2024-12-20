@@ -9,40 +9,46 @@ Example call:
 
     compare output sentences by metrics and write to file for inspection
 
-    python manual_inspection.py \
+    python analysis/manual_inspection.py \
     --src_file /srv/scratch1/kew/ats/data/en/aligned/newsela_manual_v0_v4_test.tsv \
     --muss_outputs /srv/scratch1/kew/ats/muss/outputs/newsela_manual_v0_v4_test_lr0.47_ls0.79_wr0.43_td0.42.pred \
-    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v4_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
-    --fudge_outputs /srv/scratch1/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l4_article_paragraphs/newsela_manual_v0_v4_test/lambda5.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/outputs/newsela_manual_v0_v4_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --llama_outputs /srv/scratch1/kew/ats/fsllm/outputs/Llama_2_7b_hf/newsela_manual_v0_v4_test-newsela_manual_v0_v4_dev-ngram-p2-fs5-s42-k0-p1.0-t0.0-b16-bs5.jsonl \
+    --fudge_outputs /srv/scratch1/kew/ats/fudge/outputs/bart_large_muss_mined_en/newsela-lp_l4_article_paragraphs/newsela_manual_v0_v4_test/lambda5.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
     --outpath /srv/scratch1/kew/ats/data/comparative_scores_all_l4.jsonl
 
-    python manual_inspection.py \
+    python analysis/manual_inspection.py \
     --src_file /srv/scratch1/kew/ats/data/en/aligned/newsela_manual_v0_v3_test.tsv \
     --muss_outputs /srv/scratch1/kew/ats/muss/outputs/newsela_manual_v0_v3_test_lr0.52_ls0.85_wr0.45_td0.62.pred \
-    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v3_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
-    --fudge_outputs /srv/scratch1/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l3_article_paragraphs/newsela_manual_v0_v3_test/lambda4.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/outputs/newsela_manual_v0_v3_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --llama_outputs /srv/scratch1/kew/ats/fsllm/outputs/Llama_2_7b_hf/newsela_manual_v0_v3_test-newsela_manual_v0_v3_dev-ngram-p2-fs5-s42-k0-p1.0-t0.0-b16-bs5.jsonl \
+    --fudge_outputs /srv/scratch1/kew/ats/fudge/outputs/bart_large_muss_mined_en/newsela-lp_l3_article_paragraphs/newsela_manual_v0_v3_test/lambda4.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
     --outpath /srv/scratch1/kew/ats/data/comparative_scores_all_l3.jsonl
 
-    python manual_inspection.py \
+    python analysis/manual_inspection.py \
     --src_file /srv/scratch1/kew/ats/data/en/aligned/newsela_manual_v0_v2_test.tsv \
     --muss_outputs /srv/scratch1/kew/ats/muss/outputs/newsela_manual_v0_v2_test_lr0.75_ls0.82_wr0.94_td0.22.pred \
-    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v2_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
-    --fudge_outputs /srv/scratch1/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l2_article_paragraphs/newsela_manual_v0_v2_test/lambda4.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/outputs/newsela_manual_v0_v2_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --llama_outputs /srv/scratch1/kew/ats/fsllm/outputs/Llama_2_7b_hf/newsela_manual_v0_v2_test-newsela_manual_v0_v2_dev-ngram-p2-fs5-s42-k0-p1.0-t0.0-b16-bs5.jsonl \
+    --fudge_outputs /srv/scratch1/kew/ats/fudge/outputs/bart_large_muss_mined_en/newsela-lp_l2_article_paragraphs/newsela_manual_v0_v2_test/lambda4.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
     --outpath /srv/scratch1/kew/ats/data/comparative_scores_all_l2.jsonl
 
-    python manual_inspection.py \
+    python analysis/manual_inspection.py \
     --src_file /srv/scratch1/kew/ats/data/en/aligned/newsela_manual_v0_v1_test.tsv \
     --muss_outputs /srv/scratch1/kew/ats/muss/outputs/newsela_manual_v0_v1_test_lr0.3_ls0.99_wr0.54_td1.45.pred \
-    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/results/newsela_manual_v0_v1_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
-    --fudge_outputs /srv/scratch1/kew/ats/fudge/results/bart_large_muss_mined_en/newsela-lp_l1_article_paragraphs/newsela_manual_v0_v1_test/lambda1.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --super_outputs /srv/scratch1/kew/ats/supervised/newsela_manual/outputs/newsela_manual_v0_v1_test/lambda0.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.0_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
+    --llama_outputs /srv/scratch1/kew/ats/fsllm/outputs/Llama_2_7b_hf/newsela_manual_v0_v1_test-newsela_manual_v0_v1_dev-ngram-p2-fs5-s42-k0-p1.0-t0.0-b16-bs5.jsonl \
+    --fudge_outputs /srv/scratch1/kew/ats/fudge/outputs/bart_large_muss_mined_en/newsela-lp_l1_article_paragraphs/newsela_manual_v0_v1_test/lambda1.0_pretopk200_beams5_estopFalse_maxl128_minl10_sampleFalse_lp1.0_norep1_bgrps1_nbest5_repp1.2_softFalse_temp1.0_topk0_topp1.0_bs1.txt \
     --score all \
     --outpath /srv/scratch1/kew/ats/data/comparative_scores_all_l1.jsonl
 
 """
 
+from pathlib import Path
+import json
 import argparse
 import random
 import sys
@@ -61,6 +67,7 @@ def set_args():
     ap.add_argument('--muss_outputs', type=str, required=False, default=None)
     ap.add_argument('--fudge_outputs', type=str, required=False, default=None)
     ap.add_argument('--super_outputs', type=str, required=False, default=None)
+    ap.add_argument('--llama_outputs', type=str, required=False, default=None)
     ap.add_argument('-n', type=int, required=False, default=5)
     ap.add_argument('--seed', type=int, required=False, default=42)
     ap.add_argument('--score', type=str, choices=['sari', 'bleu', 'fkgl', 'all'], required=False, default=None)
@@ -71,12 +78,18 @@ def set_args():
 def read_split_lines(filename: str, split_sep: str = '\t') -> Tuple[List[str]]:
     """from easse/utils/helpers.py"""
     texts, more_texts = [], []
-    with open(filename, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip().split(split_sep)
-            texts.append(line[0])
-            if len(line) == 2:
-                more_texts.append(line[1])
+    if Path(filename).suffix == '.jsonl':
+        with open(filename, encoding="utf-8") as f:
+            for line in f:
+                line = json.loads(line)
+                texts.append(line['system'])
+    else:
+        with open(filename, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip().split(split_sep)
+                texts.append(line[0])
+                if len(line) == 2:
+                    more_texts.append(line[1])
     return texts, more_texts
 
 def read_parallel_files(args) -> Dict:
@@ -85,6 +98,7 @@ def read_parallel_files(args) -> Dict:
     muss_texts, _ = read_split_lines(args.muss_outputs) if args.muss_outputs is not None else None
     fudge_texts, _ = read_split_lines(args.fudge_outputs) if args.fudge_outputs is not None else None
     super_texts, _ = read_split_lines(args.super_outputs) if args.super_outputs is not None else None
+    llama_texts, _ = read_split_lines(args.llama_outputs) if args.llama_outputs is not None else None
 
     if src_texts is not None and muss_texts is not None:
         assert len(src_texts) == len(muss_texts)
@@ -95,12 +109,16 @@ def read_parallel_files(args) -> Dict:
     if src_texts is not None and super_texts is not None:
         assert len(src_texts) == len(super_texts)
 
+    if src_texts is not None and llama_texts is not None:
+        assert len(src_texts) == len(llama_texts)
+
     return {
         'src_texts': src_texts,
         'tgt_texts': tgt_texts,
         'muss_texts': muss_texts,
         'fudge_texts': fudge_texts,
         'super_texts': super_texts,
+        'llama_texts': llama_texts,
     }
 
 
@@ -119,6 +137,8 @@ def view_samples(data: Dict) -> None:
             print(f"FUDGE\t: {data['fudge_texts'][idx]}")
         if data['super_texts']  is not None:
             print(f"SUPER\t: {data['super_texts'][idx]}")
+        if data['llama_texts']  is not None:
+            print(f"LLAMA\t: {data['llama_texts'][idx]}")
     return
 
 
@@ -204,11 +224,23 @@ def compute_divergence(data, score):
         elif score == 'bertscore':
             super_scores = _score_sents_bertscore(data['tgt_texts'], data['super_texts'])
 
+    if data['llama_texts'] is not None:
+        if score == 'sari':
+            llama_scores = _score_sents_sari(data['src_texts'], data['tgt_texts'], data['llama_texts'])
+        elif score == 'bleu':
+            llama_scores = _score_sents_bleu(data['tgt_texts'], data['llama_texts'])
+        elif score == 'fkgl':
+            llama_scores = _score_sents_fkgl(data['llama_texts'])
+        elif score == 'bertscore':
+            llama_scores = _score_sents_bertscore(data['tgt_texts'], data['llama_texts'])
+
     data[f'muss_{score}'] = muss_scores
     data[f'fudge_{score}'] = fudge_scores
     data[f'super_{score}'] = super_scores
+    data[f'llama_{score}'] = llama_scores
     data[f'diff_{score}_muss_fudge'] = muss_scores - fudge_scores
     data[f'diff_{score}_super_fudge'] = super_scores - fudge_scores
+    data[f'diff_{score}_llama_fudge'] = llama_scores - fudge_scores
 
     return data
 
@@ -234,6 +266,7 @@ def pretty_print(df, score, max_items=-1):
             print(f"MUSS {row.muss_sari:.2f}\t: {row.muss_texts}")
             print(f"FUDGE {row.fudge_sari:.2f}\t: {row.fudge_texts}")
             print(f"SUPER {row.super_sari:.2f}\t: {row.super_texts}")
+            print(f"LLAMA {row.llama_sari:.2f}\t: {row.llama_texts}")
             print('---')
 
 
@@ -247,6 +280,7 @@ def pretty_print(df, score, max_items=-1):
             print(f"MUSS {row.muss_bleu:.2f}\t: {row.muss_texts}")
             print(f"FUDGE {row.fudge_bleu:.2f}\t: {row.fudge_texts}")
             print(f"SUPER {row.super_bleu:.2f}\t: {row.super_texts}")
+            print(f"LLAMA {row.llama_bleu:.2f}\t: {row.llama_texts}")
             print('---')
 
 
@@ -260,6 +294,7 @@ def pretty_print(df, score, max_items=-1):
             print(f"MUSS {row.muss_fkgl:.2f}\t: {row.muss_texts}")
             print(f"FUDGE {row.fudge_fkgl:.2f}\t: {row.fudge_texts}")
             print(f"SUPER {row.super_fkgl:.2f}\t: {row.super_texts}")
+            print(f"LLAMA {row.llama_fkgl:.2f}\t: {row.llama_texts}")
             print('---')
 
     if score == 'bertscore':
@@ -272,6 +307,7 @@ def pretty_print(df, score, max_items=-1):
             print(f"MUSS {row.muss_bertscore:.2f}\t: {row.muss_texts}")
             print(f"FUDGE {row.fudge_bertscore:.2f}\t: {row.fudge_texts}")
             print(f"SUPER {row.super_bertscore:.2f}\t: {row.super_texts}")
+            print(f"LLAMA {row.llama_bertscore:.2f}\t: {row.llama_texts}")
             print('---')
 
     return

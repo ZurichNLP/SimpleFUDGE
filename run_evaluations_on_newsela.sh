@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # -*- coding: utf-8 -*-
 
+# note to self: run in llm_hf1 env
+
 # Example call:
-# bash run_evaluations_v2.sh 0 test
-# bash run_evaluations_v2.sh 0 testcattrain
+# bash run_evaluations_on_newsela.sh.sh 0 test
+# bash run_evaluations_on_newsela.sh.sh 0 testcattrain
 
 # Wraps call to simplification evaluation for all relevant outputs in one script, e.g.
 # python evaluation/simplification_evaluation_v2.py \
@@ -23,7 +25,7 @@ fsllm_outputs=$SCRATCH/fsllm/outputs
 # init results as header from evaldataframe
 # results=$"file;ppl_diff;bleu;sari;fkgl;bertscore_p;bertscore_r;bertscore_f1;Compression ratio;Sentence splits;Levenshtein similarity;Exact copies;Additions proportion;Deletions proportion;Lexical complexity score\n"
 # results=$"file;ppl;bleu;sari;fkgl;bertscore_p_ref;bertscore_r_ref;bertscore_f1_ref;bertscore_p_src;bertscore_r_src;bertscore_f1_src;intra_dist1;intra_dist2;inter_dist1;inter_dist2;Compression ratio;Sentence splits;Levenshtein similarity;Exact copies;Additions proportion;Deletions proportion;Lexical complexity score\n"
-results=$"bleu;sari;fkgl;pbert_ref;rbert_ref;fbert_ref;pbert_src;rbert_src;fbert_src;ppl_mean;ppl_std;lens;lens_std;intra_dist1;intra_dist2;inter_dist1;inter_dist2;Compression ratio;Sentence splits;Levenshtein similarity;Exact copies;Additions proportion;Deletions proportion;Lexical complexity score;file_id\n"
+results=$"bleu;sari;sari_add;sari_keep;sari_del;fkgl;pbert_ref;rbert_ref;fbert_ref;pbert_src;rbert_src;fbert_src;ppl_mean;ppl_std;lens;lens_std;intra_dist1;intra_dist2;inter_dist1;inter_dist2;Compression ratio;Sentence splits;Levenshtein similarity;Exact copies;Additions proportion;Deletions proportion;Lexical complexity score;file_id\n"
 
 gpu=${1:-"0"}
 split=${2:-"test"}
@@ -42,6 +44,8 @@ export CUDA_VISIBLE_DEVICES=$gpu # recommended if computing ppl with gpt2
 # #     fi
 # # done
 
+mkdir -p $SCRATCH/results
+
 # ground truth evaluations
 for level in 1 2 3 4; do
     # resources/data/en/aligned/newsela_manual_v0_v1_testcattrain.tsv
@@ -54,6 +58,7 @@ for level in 1 2 3 4; do
     outfile=$SCRATCH/results/newsela_manual_v0_v${level}_${split}_ground_truth.csv
     # run eval
     python evaluation/simplification_evaluation_v2.py ${tmpfile} --src_file $infile --use_cuda --lens_model_path "/srv/scratch1/kew/llm_ats/LENS/checkpoints/epoch=5-step=6102.ckpt" --out_file $outfile
+    # python evaluation/simplification_evaluation_v2.py ${tmpfile} --src_file $infile --out_file $outfile
     # remove tmpfile
     rm $tmpfile
 done

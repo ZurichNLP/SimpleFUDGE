@@ -56,7 +56,7 @@ def set_args():
     parser.add_argument('--ref_file', type=str, required=False, help='Path to a TXT file with reference sentences. WARING: assumes only one reference set.')
     parser.add_argument('--out_file', type=str, required=False, help='Path to a CSV file with metric scores.')
     parser.add_argument('--use_cuda', action='store_true', help='if provided, model-based metrics such as PPL and BERTScore will be computed on GPU.')
-    parser.add_argument('--lens_model_path', type=str, required=False, default='resources/LENS/checkpoints/epoch=5-step=6102.ckpt', help='Path to a LENS model (see https://github.com/Yao-Dou/LENS/tree/master/lens)')
+    parser.add_argument('--lens_model_path', type=str, required=False, default=None, help='Path to a LENS model (see https://github.com/Yao-Dou/LENS/tree/master/lens)') # resources/LENS/checkpoints/epoch=5-step=6102.ckpt
     return parser.parse_args()
 
 def normalise(scores: Iterable[float]) -> List[float]:
@@ -76,6 +76,10 @@ def compute_metrics(
     # basic simplification metrics
     results['bleu'] = bleu.corpus_bleu(hyp_sents, refs_sents)
     results['sari'] = sari.corpus_sari(src_sents, hyp_sents, refs_sents, legacy=False)
+    sari_add, sari_keep, sari_del = sari.get_corpus_sari_operation_scores(src_sents, hyp_sents, refs_sents)
+    results['sari_add'] = sari_add
+    results['sari_keep'] = sari_keep
+    results['sari_del'] = sari_del
     results['fkgl'] = fkgl.corpus_fkgl(hyp_sents)
     
     results['pbert_ref'], results['rbert_ref'], results['fbert_ref'] = None, None, None
